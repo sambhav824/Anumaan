@@ -31,13 +31,17 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize database tables and default developer seed data."""
+    # Ensure all models are registered on Base.metadata before creating tables
+    from app.models.models import (
+        Profile, Organization, OrganizationMember, Client, Project,
+        Estimate, BOQItem, Quotation
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     # Seed default developer credentials if SQLite
     if "sqlite" in settings.DATABASE_URL:
         async with AsyncSessionLocal() as session:
-            from app.models.models import Profile, Organization, OrganizationMember, Client, Project
             from sqlalchemy.future import select
             import hashlib
 

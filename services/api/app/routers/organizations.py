@@ -1,7 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
@@ -43,18 +45,26 @@ async def list_user_organizations(
     return orgs
 
 
-@router.post("", response_model=OrganizationRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=OrganizationRead)
 async def create_organization(
     org_in: OrganizationCreate,
+    response: Response,
     current_user: Profile = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Creates a new organization and assigns current user as the 'owner'.
+    Assigns created_by to current_user.id.
+    If an organization with the same (created_by, lower(name)) already exists,
+    catches IntegrityError, rolls back, and returns the EXISTING organization with HTTP 200 OK.
     """
+    user_id = current_user.id
+    user_full_name = current_user.full_name
+    normalized_name = org_in.name
+
     new_org = Organization(
-        name=org_in.name.strip(),
-        owner_person=org_in.owner_person.strip() if org_in.owner_person else current_user.full_name,
+        name=normalized_name,
+        owner_person=org_in.owner_person.strip() if org_in.owner_person else user_full_name,
         email=org_in.email.strip() if org_in.email else None,
         phone=org_in.phone.strip() if org_in.phone else None,
         business_address=org_in.business_address.strip() if org_in.business_address else None,
@@ -63,23 +73,50 @@ async def create_organization(
         pin_code=org_in.pin_code.strip() if org_in.pin_code else None,
         gstin=org_in.gstin.strip().upper() if org_in.gstin else None,
         logo_url=org_in.logo_url.strip() if org_in.logo_url else None,
+        created_by=user_id
     )
-    db.add(new_org)
-    await db.flush()
+    try:
+        db.add(new_org)
+        await db.flush()
 
-    # Assign owner membership
-    owner_member = OrganizationMember(
-        organization_id=new_org.id,
-        user_id=current_user.id,
-        role="owner"
-    )
-    db.add(owner_member)
-    await db.commit()
-    await db.refresh(new_org)
+        # Assign owner membership
+        owner_member = OrganizationMember(
+            organization_id=new_org.id,
+            user_id=user_id,
+            role="owner"
+        )
+        db.add(owner_member)
+        await db.commit()
+        await db.refresh(new_org)
 
-    org_out = OrganizationRead.model_validate(new_org)
-    org_out.user_role = "owner"
-    return org_out
+        response.status_code = status.HTTP_201_CREATED
+        org_out = OrganizationRead.model_validate(new_org)
+        org_out.user_role = "owner"
+        return org_out
+    except IntegrityError:
+        await db.rollback()
+        # Query existing organization with matching created_by and lower(name)
+        existing_res = await db.execute(
+            select(Organization).where(
+                Organization.created_by == user_id,
+                func.lower(Organization.name) == func.lower(normalized_name)
+            )
+        )
+        existing_org = existing_res.scalars().first()
+        if existing_org:
+            m_res = await db.execute(
+                select(OrganizationMember.role).where(
+                    OrganizationMember.organization_id == existing_org.id,
+                    OrganizationMember.user_id == user_id
+                )
+            )
+            user_role = m_res.scalar_one_or_none() or "owner"
+
+            response.status_code = status.HTTP_200_OK
+            org_out = OrganizationRead.model_validate(existing_org)
+            org_out.user_role = user_role
+            return org_out
+        raise
 
 
 @router.get("/{organization_id}", response_model=OrganizationRead)

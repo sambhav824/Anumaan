@@ -261,3 +261,22 @@ def test_production_environment_config_invariants():
         SUPABASE_JWT_SECRET="a-valid-production-grade-secret-key-32-chars-long"
     )
     assert prod_settings.ENVIRONMENT == "production"
+
+
+@pytest.mark.asyncio
+async def test_sqlite_init_db_creates_all_tables():
+    """
+    Regression test: Ensures init_db() registers all models on Base.metadata
+    and creates all 8 core tables in SQLite: profiles, organizations,
+    organization_members, clients, projects, estimates, boq_items, quotations.
+    """
+    from app.core.database import Base, init_db
+    await init_db()
+    registered_tables = set(Base.metadata.tables.keys())
+    expected_tables = {
+        "profiles", "organizations", "organization_members",
+        "clients", "projects", "estimates", "boq_items", "quotations"
+    }
+    missing = expected_tables - registered_tables
+    assert not missing, f"Missing table registrations on Base.metadata: {missing}"
+

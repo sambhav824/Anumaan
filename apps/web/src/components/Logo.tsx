@@ -11,7 +11,7 @@ interface LogoProps {
 }
 
 export function Logo({ showTagline = true, className = "", size = "md" }: LogoProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   return (
     <Link href="/dashboard" className={`inline-flex items-center gap-3 group ${className}`}>

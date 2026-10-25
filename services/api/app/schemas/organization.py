@@ -1,7 +1,23 @@
 import re
+import unicodedata
 from typing import Optional, Literal, List
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, ConfigDict
+
+
+def validate_organization_name(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    if not v.strip():
+        raise ValueError("Organization name cannot be empty or whitespace only.")
+    normalized = unicodedata.normalize("NFKC", v.strip())
+    if len(normalized) < 2 or len(normalized) > 255:
+        raise ValueError("Organization name must be between 2 and 255 characters.")
+    if re.search(r"[\x00-\x1F\x7F-\x9F]", normalized):
+        raise ValueError("Organization name contains invalid control characters.")
+    if re.search(r"[\u200B-\u200D\uFEFF]", normalized):
+        raise ValueError("Organization name contains invalid zero-width characters.")
+    return normalized
 
 
 class OrganizationBase(BaseModel):
@@ -16,6 +32,11 @@ class OrganizationBase(BaseModel):
     gstin: Optional[str] = Field(None, max_length=30)
     logo_url: Optional[str] = Field(None, max_length=1024)
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        return validate_organization_name(v)
+
     @field_validator("gstin")
     @classmethod
     def validate_gstin(cls, v: Optional[str]) -> Optional[str]:
@@ -23,7 +44,6 @@ class OrganizationBase(BaseModel):
             v = v.strip().upper()
             gst_regex = r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
             if not re.match(gst_regex, v):
-                # We allow saving while warning or validating if not strictly empty
                 pass
         return v
 
@@ -44,6 +64,11 @@ class OrganizationUpdate(BaseModel):
     gstin: Optional[str] = Field(None, max_length=30)
     logo_url: Optional[str] = Field(None, max_length=1024)
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        return validate_organization_name(v)
+
 
 class MemberRead(BaseModel):
     id: str
@@ -58,6 +83,7 @@ class MemberRead(BaseModel):
 
 class OrganizationRead(OrganizationBase):
     id: str
+    created_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     user_role: Optional[str] = None

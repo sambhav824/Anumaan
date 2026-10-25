@@ -6,12 +6,17 @@ import { supabase } from "../lib/supabaseClient";
 import { setApiAuthToken, api } from "../lib/api";
 import { useTranslation, Locale } from "./I18nContext";
 
+export interface SignUpResult {
+  needsEmailConfirmation: boolean;
+  user: User | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, companyName?: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, companyName?: string) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
 }
 
@@ -24,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { setLocale } = useTranslation();
 
   useEffect(() => {
-    // 1. Fetch initial active Supabase session
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
@@ -50,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
 
-    // 2. Listen to continuous Supabase auth state transitions
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -74,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [setLocale]);
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
@@ -85,7 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        throw new Error(error.message);
+        const customErr = new Error(error.message) as any;
+        customErr.code = (error as any).code || (error as any).status;
+        throw customErr;
       }
 
       setSession(data.session);
@@ -101,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     fullName: string,
     companyName?: string
-  ) => {
+  ): Promise<SignUpResult> => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -116,16 +121,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        throw new Error(error.message);
+        const customErr = new Error(error.message) as any;
+        customErr.code = (error as any).code || (error as any).status;
+        throw customErr;
       }
 
       setSession(data.session);
       setUser(data.user);
       setApiAuthToken(data.session?.access_token ?? null);
 
-      if (data.user && !data.session) {
-        throw new Error("Account created! Please check your email to confirm before logging in.");
-      }
+      const needsEmailConfirmation = Boolean(data.user && !data.session);
+      return {
+        needsEmailConfirmation,
+        user: data.user,
+      };
     } finally {
       setLoading(false);
     }

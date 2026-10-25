@@ -54,19 +54,17 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     },
     {
       label: t("nav.estimates"),
-      href: "#",
+      href: "/estimates",
       icon: Calculator,
-      active: false,
-      enabled: false,
-      badge: t("nav.comingSoon"),
+      active: pathname.startsWith("/estimates"),
+      enabled: true,
     },
     {
       label: t("nav.quotations"),
-      href: "#",
+      href: "/quotations",
       icon: FileSpreadsheet,
-      active: false,
-      enabled: false,
-      badge: t("nav.comingSoon"),
+      active: pathname.startsWith("/quotations"),
+      enabled: true,
     },
     {
       label: t("nav.rateLibrary"),
@@ -101,13 +99,13 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
           <div className="min-w-0 flex-1">
             {organizations.length > 1 ? (
               <select
-                aria-label="Active Organization"
+                aria-label={t("common.selectOrg") || "Active Organization"}
                 value={currentOrg?.id || ""}
                 onChange={(e) => {
                   const selected = organizations.find((o) => o.id === e.target.value);
                   if (selected) setCurrentOrg(selected);
                 }}
-                className="w-full text-xs font-medium text-anumaan-charcoal-900 bg-transparent border-0 truncate focus:ring-0 cursor-pointer p-0"
+                className="w-full text-xs font-medium text-anumaan-charcoal-900 bg-transparent border-0 truncate focus:ring-0 cursor-pointer p-0 font-devanagari"
               >
                 {organizations.map((org) => (
                   <option key={org.id} value={org.id}>
@@ -116,12 +114,12 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                 ))}
               </select>
             ) : (
-              <p className="text-xs font-semibold text-anumaan-charcoal-900 truncate">
+              <p className="text-xs font-semibold text-anumaan-charcoal-900 truncate font-devanagari">
                 {currentOrg?.name || "Sahyadri Infra"}
               </p>
             )}
-            <p className="text-[10px] text-anumaan-charcoal-400 capitalize">
-              {currentOrg?.user_role || "Member"}
+            <p className="text-[10px] text-anumaan-charcoal-500 font-devanagari">
+              {currentOrg?.user_role ? (t(`orgRole.${currentOrg.user_role}`) || currentOrg.user_role) : (t("orgRole.member") || "Member")}
             </p>
           </div>
         </div>

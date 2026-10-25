@@ -4,9 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 
+import { useTranslation } from "../context/I18nContext";
+
 export default function HomePage() {
   const router = useRouter();
   const { session, loading } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!loading) {
@@ -23,7 +26,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-anumaan-gold-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-sm font-medium text-anumaan-charcoal-600 font-devanagari">
-          अनुमान लोड होत आहे...
+          {t("common.loading") || "Loading..."}
         </p>
       </div>
     </div>

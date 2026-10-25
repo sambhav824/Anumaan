@@ -33,7 +33,11 @@ export default function LoginPage() {
       await signIn(email, password);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || t("auth.invalidCredentials"));
+      if (err?.code === "email_not_confirmed") {
+        setError(t("auth.emailNotConfirmedAlert"));
+      } else {
+        setError(err.message || t("auth.invalidCredentials"));
+      }
     } finally {
       setLoading(false);
     }
@@ -60,43 +64,43 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mb-5 p-3.5 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 font-devanagari">{error}</p>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-sm text-red-700 font-devanagari">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
-                {t("auth.emailLabel")}
+              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1.5 font-devanagari">
+                {t("auth.emailLabel") || t("auth.email")}
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-anumaan-charcoal-400" />
+                <Mail className="w-4 h-4 text-anumaan-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("auth.emailPlaceholder")}
-                  required
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-sans"
+                  placeholder={t("auth.emailPlaceholder") || "engineer@company.com"}
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-anumaan-border rounded-lg text-sm text-anumaan-charcoal-900 focus:outline-hidden focus:ring-2 focus:ring-anumaan-gold-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
-                {t("auth.passwordLabel")}
+              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1.5 font-devanagari">
+                {t("auth.passwordLabel") || t("auth.password")}
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-anumaan-charcoal-400" />
+                <Lock className="w-4 h-4 text-anumaan-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("auth.passwordPlaceholder")}
-                  required
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-sans"
+                  placeholder={t("auth.passwordPlaceholder") || "••••••••"}
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-anumaan-border rounded-lg text-sm text-anumaan-charcoal-900 focus:outline-hidden focus:ring-2 focus:ring-anumaan-gold-500"
                 />
               </div>
             </div>
@@ -104,45 +108,24 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-md bg-anumaan-charcoal-900 text-white text-sm font-semibold hover:bg-anumaan-charcoal-800 transition-colors font-devanagari disabled:opacity-60 shadow-xs"
+              className="w-full mt-2 flex items-center justify-center gap-2 px-5 py-2.5 bg-anumaan-gold-600 hover:bg-anumaan-gold-700 disabled:opacity-50 text-white font-medium rounded-lg shadow-xs transition-colors font-devanagari"
             >
-              <span>{loading ? t("auth.loggingIn") : t("auth.signInButton")}</span>
-              <ArrowRight className="w-4 h-4 text-anumaan-gold-500" />
-            </button>
-
-            {/* Quick Demo Login Button for Instant Testing */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setEmail("engineer@anumaan.in");
-                setPassword("Password123");
-                try {
-                  setLoading(true);
-                  await signIn("engineer@anumaan.in", "Password123");
-                  router.push("/dashboard");
-                } catch (err: any) {
-                  setError(err.message || "Failed to sign in.");
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="w-full py-2 px-4 rounded-md border border-anumaan-gold-500/50 bg-anumaan-gold-50/40 text-anumaan-charcoal-900 text-xs font-semibold hover:bg-anumaan-gold-50 transition-colors font-devanagari flex items-center justify-center gap-2"
-            >
-              <span>⚡ डेमों खात्यासह साइन इन करा (1-Click Demo Login)</span>
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>{t("auth.signInButton")}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-anumaan-border-light text-center">
-            <p className="text-xs text-anumaan-charcoal-500 font-devanagari">
-              {t("auth.needAccount")}{" "}
-              <Link
-                href="/signup"
-                className="font-semibold text-anumaan-gold-600 hover:text-anumaan-gold-700 underline underline-offset-2 ml-1"
-              >
-                {t("auth.signUpButton")}
-              </Link>
-            </p>
+          <div className="mt-6 text-center text-xs text-anumaan-charcoal-500 font-devanagari">
+            {t("auth.needAccount")}{" "}
+            <Link href="/signup" className="text-anumaan-gold-700 hover:underline font-semibold font-devanagari">
+              {t("auth.createAccount") || t("auth.signUpButton")}
+            </Link>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.rate_limiter import RateLimitMiddleware
 from app.core.database import init_db
 from app.routers import (
     health_router,
@@ -10,6 +11,8 @@ from app.routers import (
     organizations_router,
     clients_router,
     projects_router,
+    estimates_router,
+    quotations_router,
 )
 
 
@@ -28,7 +31,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Middleware
+# Rate Limiting Middleware (Inner)
+app.add_middleware(RateLimitMiddleware)
+
+# CORS Middleware (Outermost)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -44,6 +50,8 @@ app.include_router(profile_router)
 app.include_router(organizations_router)
 app.include_router(clients_router)
 app.include_router(projects_router)
+app.include_router(estimates_router)
+app.include_router(quotations_router)
 
 
 @app.get("/")

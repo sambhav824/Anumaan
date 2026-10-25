@@ -57,6 +57,11 @@ def generate_jwt_token(user_id: str, email: str, full_name: str, language_prefer
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def signup(req: SignUpRequest, db: AsyncSession = Depends(get_db)):
     """Registers a new user and creates their organization."""
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mock signup endpoint is disabled in production. Authentication is managed directly via Supabase Auth."
+        )
     # Check if email already registered
     existing_res = await db.execute(select(Profile).where(Profile.email == req.email.lower()))
     if existing_res.scalars().first():
@@ -115,6 +120,11 @@ async def signup(req: SignUpRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=AuthResponse)
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Authenticates a user and returns a Supabase-compatible JWT."""
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mock login endpoint is disabled in production. Authentication is managed directly via Supabase Auth."
+        )
     res = await db.execute(select(Profile).where(Profile.email == req.email.lower()))
     user = res.scalars().first()
 

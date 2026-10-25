@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "./AuthContext";
 
@@ -16,6 +16,7 @@ export interface Organization {
   pin_code?: string;
   gstin?: string;
   logo_url?: string;
+  created_by?: string;
   user_role?: "owner" | "admin" | "member";
 }
 
@@ -25,91 +26,97 @@ interface OrgContextType {
   setCurrentOrg: (org: Organization) => void;
   refreshOrganizations: () => Promise<void>;
   loading: boolean;
+  isError: boolean;
+  errorMessage: string | null;
+  createOrg: (data: Partial<Organization>) => Promise<Organization>;
 }
 
 const OrgContext = createContext<OrgContextType | undefined>(undefined);
 
 export function OrgProvider({ children }: { children: ReactNode }) {
-  const { user, session } = useAuth();
+  const { session } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const isCreatingOrgRef = useRef<boolean>(false);
+  const [isError, setIsError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const fetchOrgs = async () => {
+  const fetchOrgs = useCallback(async () => {
     if (!session?.access_token) {
       setOrganizations([]);
       setCurrentOrg(null);
       setLoading(false);
+      setIsError(false);
+      setErrorMessage(null);
       return;
     }
 
     try {
       setLoading(true);
+      setIsError(false);
+      setErrorMessage(null);
+
       const orgs = await api.listOrganizations();
+      setOrganizations(orgs);
 
       if (orgs.length > 0) {
-        setOrganizations(orgs);
         const savedId =
           typeof window !== "undefined"
             ? localStorage.getItem("anumaan_active_org_id")
             : null;
-        const found = orgs.find((o) => o.id === savedId) || orgs[0];
-        setCurrentOrg(found);
-      } else if (!isCreatingOrgRef.current) {
-        // Authenticated user has no organization yet: create default organization idempotently
-        isCreatingOrgRef.current = true;
-        try {
-          const companyName =
-            (user?.user_metadata?.company_name as string)?.trim() ||
-            (user?.user_metadata?.full_name
-              ? `${user.user_metadata.full_name}'s Company`
-              : "My Construction Co");
-          const ownerPerson =
-            (user?.user_metadata?.full_name as string)?.trim() ||
-            user?.email ||
-            "Owner";
-
-          const newOrg = await api.createOrganization({
-            name: companyName,
-            owner_person: ownerPerson,
-            email: user?.email || undefined,
-          });
-
-          setOrganizations([newOrg]);
-          setCurrentOrg(newOrg);
+        const found = orgs.find((o) => o.id === savedId);
+        if (found) {
+          setCurrentOrg(found);
+        } else {
+          // Stale stored org ID is cleared from localStorage
           if (typeof window !== "undefined") {
             try {
-              localStorage.setItem("anumaan_active_org_id", newOrg.id);
+              localStorage.removeItem("anumaan_active_org_id");
             } catch {}
           }
-        } catch (createErr) {
-          console.error("Failed to auto-create initial organization:", createErr);
-          setOrganizations([]);
-          setCurrentOrg(null);
-        } finally {
-          isCreatingOrgRef.current = false;
+          setCurrentOrg(orgs[0]);
         }
       } else {
-        setOrganizations([]);
+        // Successful empty list: user has zero organizations
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("anumaan_active_org_id");
+          } catch {}
+        }
         setCurrentOrg(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load user organizations:", err);
+      setIsError(true);
+      setErrorMessage(err.message || "Failed to load organizations. Please try again.");
+      setOrganizations([]);
+      setCurrentOrg(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.access_token]);
 
   useEffect(() => {
     fetchOrgs();
-  }, [session?.access_token]);
+  }, [fetchOrgs]);
 
   const handleSetCurrentOrg = (org: Organization) => {
     setCurrentOrg(org);
     try {
       localStorage.setItem("anumaan_active_org_id", org.id);
     } catch {}
+  };
+
+  const createOrg = async (data: Partial<Organization>): Promise<Organization> => {
+    const newOrg = await api.createOrganization(data);
+    await fetchOrgs();
+    setCurrentOrg(newOrg);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("anumaan_active_org_id", newOrg.id);
+      } catch {}
+    }
+    return newOrg;
   };
 
   return (
@@ -120,6 +127,9 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         setCurrentOrg: handleSetCurrentOrg,
         refreshOrganizations: fetchOrgs,
         loading,
+        isError,
+        errorMessage,
+        createOrg,
       }}
     >
       {children}
