@@ -21,6 +21,7 @@ import { useOrg } from "../../../context/OrgContext";
 import { api, Estimate } from "../../../lib/api";
 import { Modal } from "../../../components/Modal";
 import { formatIndianCurrency } from "../../../lib/calculations";
+import { ContractorRatesSection } from "../../../components/ContractorRatesSection";
 
 export default function EstimatesPage() {
   const { t } = useTranslation();
@@ -347,7 +348,7 @@ export default function EstimatesPage() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Ground Floor RCC & Masonry Estimate"
+                placeholder={t("estimates.estimate_name_placeholder") || "e.g. Ground Floor RCC & Masonry Estimate"}
                 value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-2 text-anumaan-charcoal-900 bg-white"
@@ -375,11 +376,11 @@ export default function EstimatesPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-anumaan-charcoal-700 mb-1">
-                  {t("estimates.estimate_number")} (Optional)
+                  {t("estimates.estimate_number")} ({t("common.optional")})
                 </label>
                 <input
                   type="text"
-                  placeholder="Auto-generated if blank"
+                  placeholder={t("estimates.estimate_number_placeholder") || "Auto-generated if blank"}
                   value={createForm.estimate_number}
                   onChange={(e) => setCreateForm({ ...createForm, estimate_number: e.target.value })}
                   className="w-full text-xs border border-anumaan-border rounded-lg px-3 py-2 font-mono text-anumaan-charcoal-900 bg-white"
@@ -431,48 +432,26 @@ export default function EstimatesPage() {
               </div>
             </div>
 
-            {/* Configurable Rates */}
-            <div className="grid grid-cols-4 gap-2 pt-2 border-t border-anumaan-border-light">
-              <div>
-                <label className="block text-[11px] text-anumaan-charcoal-600 mb-1">Overhead %</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={createForm.overhead_pct}
-                  onChange={(e) => setCreateForm({ ...createForm, overhead_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full text-xs border border-anumaan-border rounded px-2 py-1 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-anumaan-charcoal-600 mb-1">Contingency %</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={createForm.contingency_pct}
-                  onChange={(e) => setCreateForm({ ...createForm, contingency_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full text-xs border border-anumaan-border rounded px-2 py-1 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-anumaan-charcoal-600 mb-1">Discount %</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={createForm.discount_pct}
-                  onChange={(e) => setCreateForm({ ...createForm, discount_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full text-xs border border-anumaan-border rounded px-2 py-1 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-anumaan-charcoal-600 mb-1">GST %</label>
-                <input
-                  type="number"
-                  step="1"
-                  value={createForm.gst_pct}
-                  onChange={(e) => setCreateForm({ ...createForm, gst_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full text-xs border border-anumaan-border rounded px-2 py-1 font-mono"
-                />
-              </div>
+            {/* Contractor Friendly Configurable Rates */}
+            <div className="pt-2 border-t border-anumaan-border-light">
+              <ContractorRatesSection
+                values={{
+                  overheadPct: createForm.overhead_pct,
+                  contingencyPct: createForm.contingency_pct,
+                  discountPct: createForm.discount_pct,
+                  gstPct: createForm.gst_pct,
+                }}
+                onChange={(newRates) =>
+                  setCreateForm({
+                    ...createForm,
+                    overhead_pct: newRates.overheadPct,
+                    contingency_pct: newRates.contingencyPct,
+                    discount_pct: newRates.discountPct,
+                    gst_pct: newRates.gstPct,
+                  })
+                }
+                compact={true}
+              />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-anumaan-border-light">
@@ -488,7 +467,7 @@ export default function EstimatesPage() {
                 disabled={submitting || !createForm.name.trim() || !createForm.project_id}
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-anumaan-gold-600 text-white hover:bg-anumaan-gold-700 disabled:opacity-50"
               >
-                {submitting ? "Creating..." : t("estimates.create_new")}
+                {submitting ? (t("common.loading") || "Creating...") : t("estimates.create_new")}
               </button>
             </div>
           </form>

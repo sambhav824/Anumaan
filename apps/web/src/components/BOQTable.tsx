@@ -8,6 +8,7 @@ import {
   formatIndianCurrency,
 } from "../lib/calculations";
 import { MeasurementCalculatorModal, FormulaType } from "./MeasurementCalculatorModal";
+import { ContractorRatesSection } from "./ContractorRatesSection";
 import {
   Calculator,
   Plus,
@@ -381,96 +382,28 @@ export function BOQTable({
       {/* Financial Summary & Tax Breakdown Card */}
       <div className="flex flex-col md:flex-row justify-between gap-6 p-5 rounded-xl bg-gradient-to-br from-white to-anumaan-beige-50 border border-anumaan-border shadow-xs">
         {/* Configurable Rates Panel */}
-        <div className="w-full md:w-1/2 space-y-3">
-          <h4 className="text-xs font-semibold text-anumaan-charcoal-800 uppercase tracking-wider font-devanagari">
-            {t("estimates.configurable_rates_heading")}
-          </h4>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="block text-anumaan-charcoal-600 mb-1 font-devanagari">{t("estimates.overhead")}</label>
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="100"
-                disabled={readOnly}
-                value={overheadPct}
-                onChange={(e) =>
-                  onPercentagesChange?.({
-                    overheadPct: parseFloat(e.target.value) || 0,
-                    contingencyPct,
-                    discountPct,
-                    gstPct,
-                  })
-                }
-                className="w-full border border-anumaan-border rounded-lg px-2.5 py-1.5 bg-white text-anumaan-charcoal-900 font-mono disabled:bg-gray-50"
-              />
-            </div>
-            <div>
-              <label className="block text-anumaan-charcoal-600 mb-1 font-devanagari">{t("estimates.contingency")}</label>
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="100"
-                disabled={readOnly}
-                value={contingencyPct}
-                onChange={(e) =>
-                  onPercentagesChange?.({
-                    overheadPct,
-                    contingencyPct: parseFloat(e.target.value) || 0,
-                    discountPct,
-                    gstPct,
-                  })
-                }
-                className="w-full border border-anumaan-border rounded-lg px-2.5 py-1.5 bg-white text-anumaan-charcoal-900 font-mono disabled:bg-gray-50"
-              />
-            </div>
-            <div>
-              <label className="block text-anumaan-charcoal-600 mb-1 font-devanagari">{t("estimates.discount")}</label>
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="100"
-                disabled={readOnly}
-                value={discountPct}
-                onChange={(e) =>
-                  onPercentagesChange?.({
-                    overheadPct,
-                    contingencyPct,
-                    discountPct: parseFloat(e.target.value) || 0,
-                    gstPct,
-                  })
-                }
-                className="w-full border border-anumaan-border rounded-lg px-2.5 py-1.5 bg-white text-anumaan-charcoal-900 font-mono disabled:bg-gray-50"
-              />
-            </div>
-            <div>
-              <label className="block text-anumaan-charcoal-600 mb-1 font-devanagari">{t("estimates.gst")}</label>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                disabled={readOnly}
-                value={gstPct}
-                onChange={(e) =>
-                  onPercentagesChange?.({
-                    overheadPct,
-                    contingencyPct,
-                    discountPct,
-                    gstPct: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full border border-anumaan-border rounded-lg px-2.5 py-1.5 bg-white text-anumaan-charcoal-900 font-mono disabled:bg-gray-50"
-              />
-            </div>
-          </div>
+        <div className="w-full lg:w-7/12">
+          <ContractorRatesSection
+            values={{
+              overheadPct,
+              contingencyPct,
+              discountPct,
+              gstPct,
+            }}
+            onChange={(newRates) =>
+              onPercentagesChange?.({
+                overheadPct: newRates.overheadPct,
+                contingencyPct: newRates.contingencyPct,
+                discountPct: newRates.discountPct,
+                gstPct: newRates.gstPct,
+              })
+            }
+            readOnly={readOnly}
+          />
         </div>
 
         {/* Monetary Totals Breakdown */}
-        <div className="w-full md:w-1/2 md:max-w-md space-y-2 border-t md:border-t-0 md:border-l border-anumaan-border-light pt-4 md:pt-0 md:pl-6 text-xs">
+        <div className="w-full lg:w-5/12 lg:max-w-md space-y-2 border-t lg:border-t-0 lg:border-l border-anumaan-border-light pt-4 lg:pt-0 lg:pl-6 text-xs">
           <div className="flex justify-between py-1 text-anumaan-charcoal-600 font-devanagari">
             <span>{t("estimates.subtotal")}</span>
             <span className="font-mono font-medium">{formatIndianCurrency(totals.subtotal)}</span>
