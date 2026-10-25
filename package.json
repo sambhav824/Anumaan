@@ -1,0 +1,27 @@
+{
+  "name": "anumaan-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "अनुमान (Anumaan) — Multilingual Construction Estimation SaaS",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "web:dev": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
+    "web:test": "npm --prefix apps/web test",
+    "web:typecheck": "npm --prefix apps/web run typecheck",
+    "web:lint": "npm --prefix apps/web run lint"
+  },
+  "keywords": [
+    "construction",
+    "estimation",
+    "boq",
+    "saas",
+    "multilingual",
+    "marathi",
+    "hindi"
+  ],
+  "author": "Anumaan Team",
+  "license": "UNLICENSED"
+}

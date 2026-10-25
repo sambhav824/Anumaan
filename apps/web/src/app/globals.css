@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FFFFFF;
+    --foreground: #18191B;
+  }
+
+  body {
+    background-color: #FCFAF7;
+    color: #18191B;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Devanagari typography fine-tuning to prevent line collisions and clipping */
+  .font-devanagari {
+    line-height: 1.45;
+  }
+}
