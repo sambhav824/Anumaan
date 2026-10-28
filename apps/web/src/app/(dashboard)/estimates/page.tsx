@@ -42,7 +42,7 @@ export default function EstimatesPage() {
   // Create Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [estimationMode, setEstimationMode] = useState<"quick" | "detailed" | "boundary_wall">("quick");
+  const [estimationMode, setEstimationMode] = useState<"quick" | "detailed" | "boundary_wall" | "road">("quick");
   const [quickArea, setQuickArea] = useState<number>(1000);
   const [quickFloors, setQuickFloors] = useState<number>(1);
   const [quickTier, setQuickTier] = useState<"economy" | "standard" | "luxury">("standard");
@@ -53,6 +53,11 @@ export default function EstimatesPage() {
   const [wallThickness, setWallThickness] = useState<number>(230);
   const [gateWidth, setGateWidth] = useState<number>(3.0);
   const [gateHeight, setGateHeight] = useState<number>(2.0);
+
+  // Road inputs
+  const [roadLength, setRoadLength] = useState<number>(500);
+  const [roadWidth, setRoadWidth] = useState<number>(5.5);
+  const [roadPavementType, setRoadPavementType] = useState<"bituminous" | "concrete">("bituminous");
 
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -262,6 +267,135 @@ export default function EstimatesPage() {
           await api.saveBOQItems(currentOrg.id, created.id, initialItems as any);
         } catch (bwErr) {
           console.warn("Could not seed boundary wall items:", bwErr);
+        }
+      } else if (estimationMode === "road" || createForm.category === "road") {
+        try {
+          const l = roadLength || 500;
+          const w = roadWidth || 5.5;
+          const isBit = roadPavementType === "bituminous";
+          const gsbVol = Math.round(l * w * 0.15 * 100) / 100;
+          const wmmVol = Math.round(l * (w - 0.5) * 0.15 * 100) / 100;
+          const dbmVol = Math.round(l * (w - 1.0) * 0.05 * 100) / 100;
+          const bcArea = Math.round(l * (w - 1.0) * 100) / 100;
+
+          const initialItems = [
+            {
+              item_number: "1.1",
+              description: `Clearing & Grubbing and Topsoil Stripping (${l}m × ${w + 1.5}m corridor)`,
+              category: "earthwork",
+              quantity: Math.round(l * (w + 1.5) * 100) / 100,
+              unit: "sqm",
+              unit_rate: 18.5,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "road_earthwork",
+            },
+            {
+              item_number: "1.2",
+              description: `Roadway Earthwork Excavation & Subgrade Preparation (${l}m × ${w}m × 0.45m)`,
+              category: "earthwork",
+              quantity: Math.round(l * w * 0.45 * 100) / 100,
+              unit: "cum",
+              unit_rate: 185,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "road_earthwork",
+            },
+            {
+              item_number: "1.3",
+              description: `Granular Sub-Base (GSB Grade-I) 150mm Compacted Bed (${l}m × ${w}m × 150mm)`,
+              category: "road",
+              quantity: gsbVol,
+              unit: "cum",
+              unit_rate: 1450,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "road_layers",
+            },
+            {
+              item_number: "1.4",
+              description: `Wet Mix Macadam (WMM) Base Course 150mm (${l}m × ${(w - 0.5).toFixed(1)}m × 150mm)`,
+              category: "road",
+              quantity: wmmVol,
+              unit: "cum",
+              unit_rate: 1850,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "road_layers",
+            },
+            isBit
+              ? {
+                  item_number: "1.5",
+                  description: `Dense Bituminous Macadam (DBM 50mm Binder Course with VG-30 Bitumen)`,
+                  category: "road",
+                  quantity: dbmVol,
+                  unit: "cum",
+                  unit_rate: 7650,
+                  amount: 0,
+                  is_manual: false,
+                  calculation_type: "road_layers",
+                }
+              : {
+                  item_number: "1.5",
+                  description: `Pavement Quality Concrete (PQC M35 Grade) 200mm Heavy Duty Slab`,
+                  category: "concrete",
+                  quantity: Math.round(l * (w - 1.0) * 0.2 * 100) / 100,
+                  unit: "cum",
+                  unit_rate: 6850,
+                  amount: 0,
+                  is_manual: false,
+                  calculation_type: "road_layers",
+                },
+            isBit
+              ? {
+                  item_number: "1.6",
+                  description: `Bituminous Concrete (BC 30mm Wearing Course with Prime & Tack Coat)`,
+                  category: "road",
+                  quantity: bcArea,
+                  unit: "sqm",
+                  unit_rate: 485,
+                  amount: 0,
+                  is_manual: false,
+                  calculation_type: "road_layers",
+                }
+              : {
+                  item_number: "1.6",
+                  description: `Dry Lean Concrete (DLC M10 Grade) 100mm Subbase Under PQC`,
+                  category: "concrete",
+                  quantity: Math.round(l * (w - 0.5) * 0.1 * 100) / 100,
+                  unit: "cum",
+                  unit_rate: 4200,
+                  amount: 0,
+                  is_manual: false,
+                  calculation_type: "road_layers",
+                },
+            {
+              item_number: "1.7",
+              description: `Precast Concrete Kerb Stones M20 Grade with Haunching Bed (${l * 2}m)`,
+              category: "road",
+              quantity: l * 2,
+              unit: "m",
+              unit_rate: 420,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "length",
+            },
+            {
+              item_number: "1.8",
+              description: `Roadside Trapezoidal Storm Water Drain Excavation & Masonry (${l}m)`,
+              category: "earthwork",
+              quantity: l,
+              unit: "m",
+              unit_rate: 850,
+              amount: 0,
+              is_manual: false,
+              calculation_type: "length",
+            },
+          ].map((it) => ({ ...it, amount: Math.round(it.quantity * it.unit_rate * 100) / 100 }));
+
+          await api.saveBOQItems(currentOrg.id, created.id, initialItems as any);
+        } catch (roadErr) {
+          console.warn("Could not seed road items:", roadErr);
         }
       }
 
@@ -508,10 +642,13 @@ export default function EstimatesPage() {
               <label className="block text-xs font-semibold text-[#263445] mb-1.5 uppercase tracking-wider">
                 Select Estimation Workflow Mode *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
-                  onClick={() => setEstimationMode("quick")}
+                  onClick={() => {
+                    setEstimationMode("quick");
+                    setCreateForm({ ...createForm, category: "building" });
+                  }}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     estimationMode === "quick"
                       ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-2xs ring-1 ring-[#F7931E]"
@@ -547,7 +684,10 @@ export default function EstimatesPage() {
 
                 <button
                   type="button"
-                  onClick={() => setEstimationMode("boundary_wall")}
+                  onClick={() => {
+                    setEstimationMode("boundary_wall");
+                    setCreateForm({ ...createForm, category: "building" });
+                  }}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     estimationMode === "boundary_wall"
                       ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-2xs ring-1 ring-[#F7931E]"
@@ -560,6 +700,27 @@ export default function EstimatesPage() {
                   </div>
                   <p className="text-[10px] text-[#64748B] mt-1 leading-snug">
                     Dedicated wall length, height, gate deduction, coping & foundation.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEstimationMode("road");
+                    setCreateForm({ ...createForm, category: "road" });
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    estimationMode === "road"
+                      ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-2xs ring-1 ring-[#F7931E]"
+                      : "border-[#DCE4EE] bg-white text-[#64748B] hover:bg-[#F3F6FA]"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-[#102F57]">
+                    <Ruler className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Road Project</span>
+                  </div>
+                  <p className="text-[10px] text-[#64748B] mt-1 leading-snug">
+                    MoRTH corridor length, subgrade, GSB, WMM, DBM, BC, kerbs & drains.
                   </p>
                 </button>
               </div>
@@ -714,6 +875,81 @@ export default function EstimatesPage() {
                 </div>
               </div>
             )}
+
+            {/* Road Inputs */}
+            {estimationMode === "road" && (
+              <div className="p-3.5 bg-[#F3F6FA] border border-[#DCE4EE] rounded-xl space-y-3">
+                <div className="text-xs font-bold text-[#102F57] flex items-center justify-between">
+                  <span>MoRTH Standard Road Dimensions & Layers</span>
+                  <span className="text-[10px] text-blue-800 bg-blue-100 px-2 py-0.5 rounded font-semibold">
+                    MoRTH 5th Revision
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#263445] mb-1">
+                      Road Length (m) *
+                    </label>
+                    <input
+                      type="number"
+                      step="10"
+                      min="10"
+                      value={roadLength}
+                      onChange={(e) => setRoadLength(Math.max(10, Number(e.target.value)))}
+                      className="w-full text-xs border border-[#DCE4EE] rounded-lg px-2.5 py-1.5 font-mono text-[#102F57] bg-white focus:outline-hidden focus:ring-1 focus:ring-[#102F57]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#263445] mb-1">
+                      Carriageway Width (m) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="2.5"
+                      value={roadWidth}
+                      onChange={(e) => setRoadWidth(Math.max(2.5, Number(e.target.value)))}
+                      className="w-full text-xs border border-[#DCE4EE] rounded-lg px-2.5 py-1.5 font-mono text-[#102F57] bg-white focus:outline-hidden focus:ring-1 focus:ring-[#102F57]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#263445] mb-1">
+                      Pavement Surfacing *
+                    </label>
+                    <select
+                      value={roadPavementType}
+                      onChange={(e) => setRoadPavementType(e.target.value as "bituminous" | "concrete")}
+                      className="w-full text-xs border border-[#DCE4EE] rounded-lg px-2.5 py-1.5 text-[#102F57] bg-white focus:outline-hidden focus:ring-1 focus:ring-[#102F57]"
+                    >
+                      <option value="bituminous">Bituminous Flexible (GSB + WMM + DBM + BC)</option>
+                      <option value="concrete">Rigid Cement Concrete (DLC + PQC M35)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Road Takeoff Summary Preview */}
+                <div className="p-2.5 bg-white border border-[#DCE4EE] rounded-lg text-xs space-y-1">
+                  <div className="flex items-center justify-between text-[#102F57] font-bold">
+                    <span>Corridor Surface: {roadLength * roadWidth} sqm</span>
+                    <span className="text-emerald-700">
+                      Estimated Cost: ~{formatIndianCurrency(roadLength * roadWidth * (roadPavementType === "bituminous" ? 3850 : 4450))}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[#64748B] flex flex-wrap gap-x-3 gap-y-0.5 pt-1 border-t border-[#DCE4EE]">
+                    <div>GSB: <strong>{(roadLength * roadWidth * 0.15).toFixed(1)} cum</strong></div>
+                    <div>WMM: <strong>{(roadLength * Math.max(1, roadWidth - 0.5) * 0.15).toFixed(1)} cum</strong></div>
+                    {roadPavementType === "bituminous" ? (
+                      <div>Bitumen: <strong>~{((roadLength * (roadWidth - 1) * 0.05 * 108 + roadLength * (roadWidth - 1) * 3.6) / 1000).toFixed(2)} tonnes</strong></div>
+                    ) : (
+                      <div>PQC Concrete: <strong>{(roadLength * (roadWidth - 1) * 0.20).toFixed(1)} cum</strong></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-[#263445] mb-1">
                 {t("estimates.name")} *
@@ -769,7 +1005,10 @@ export default function EstimatesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setCreateForm({ ...createForm, category: "building" })}
+                  onClick={() => {
+                    setCreateForm({ ...createForm, category: "building" });
+                    if (estimationMode === "road") setEstimationMode("quick");
+                  }}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     createForm.category === "building"
                       ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-sm"
@@ -787,7 +1026,10 @@ export default function EstimatesPage() {
 
                 <button
                   type="button"
-                  onClick={() => setCreateForm({ ...createForm, category: "road" })}
+                  onClick={() => {
+                    setCreateForm({ ...createForm, category: "road" });
+                    setEstimationMode("road");
+                  }}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     createForm.category === "road"
                       ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-sm"

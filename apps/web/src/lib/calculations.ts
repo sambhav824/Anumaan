@@ -596,10 +596,19 @@ export function calculateRoadLayers(
   unit: string = "m",
   thicknessUnit?: string
 ): CalculationResult {
-  const tUnit = thicknessUnit || unit;
   const l = toMetres(length, unit);
   const w = toMetres(width, unit);
-  const t = toMetres(compactedThickness, tUnit);
+
+  // If thicknessUnit is explicitly specified, use it.
+  // Otherwise, if compactedThickness >= 1.0 and unit is "m", in civil works this is entered in mm (e.g., 150mm, 200mm, 250mm, 50mm).
+  let t: number;
+  if (thicknessUnit) {
+    t = toMetres(compactedThickness, thicknessUnit);
+  } else if (compactedThickness >= 1.0 && (unit === "m" || unit === "meter" || unit === "metres")) {
+    t = compactedThickness * MM_TO_METERS;
+  } else {
+    t = toMetres(compactedThickness, unit);
+  }
 
   if (l <= 0 || w <= 0 || t <= 0) {
     throw new Error("Road layer length, width, and thickness must be strictly positive.");
@@ -632,6 +641,69 @@ export function calculateRoadLayers(
       brass_equivalent: Number(compactedBrass.toFixed(4)),
     },
     brass_equivalent: Number(compactedBrass.toFixed(4)),
+  };
+}
+
+// 9b. Road Area Measurement (MoRTH / IRC)
+export function calculateRoadArea(
+  length: number,
+  width: number,
+  unit: string = "m"
+): CalculationResult {
+  const l = toMetres(length, unit);
+  const w = toMetres(width, unit);
+  if (l <= 0 || w <= 0) {
+    throw new Error("Road length and width must be strictly positive.");
+  }
+  const areaSqm = l * w;
+  const areaSqft = areaSqm * SQM_TO_SQFT;
+  const formula = `Road Area = Length (${l.toFixed(2)}m) × Width (${w.toFixed(2)}m) = ${areaSqm.toFixed(2)} sqm (${areaSqft.toFixed(2)} sq.ft)`;
+  return {
+    quantity: Number(areaSqm.toFixed(4)),
+    unit: "sqm",
+    formula,
+    standard_reference: "MoRTH Section 201 & IRC Standard Specifications",
+    breakdown: {
+      length_m: Number(l.toFixed(4)),
+      width_m: Number(w.toFixed(4)),
+      area_sqm: Number(areaSqm.toFixed(4)),
+      area_sqft: Number(areaSqft.toFixed(2)),
+    },
+  };
+}
+
+// 9c. Road Earthwork (Cut / Fill / Embankment)
+export function calculateRoadEarthwork(
+  length: number,
+  width: number,
+  depth: number,
+  cutOrFill: "cut" | "fill" = "cut",
+  unit: string = "m"
+): CalculationResult {
+  const l = toMetres(length, unit);
+  const w = toMetres(width, unit);
+  const d = toMetres(depth, unit);
+  if (l <= 0 || w <= 0 || d <= 0) {
+    throw new Error("Road earthwork length, width, and depth must be strictly positive.");
+  }
+  const volumeCum = l * w * d;
+  const volumeBrass = volumeCum / CUM_PER_BRASS;
+  const action = cutOrFill === "fill" ? "Embankment Fill" : "Roadway Cut Excavation";
+  const formula = `Road Earthwork (${action}) = ${l.toFixed(2)}m × ${w.toFixed(2)}m × ${d.toFixed(2)}m = ${volumeCum.toFixed(2)} cum (${volumeBrass.toFixed(2)} Brass)`;
+  return {
+    quantity: Number(volumeCum.toFixed(4)),
+    unit: "cum",
+    formula,
+    standard_reference: "MoRTH Section 301 (Roadway Excavation & Embankment)",
+    breakdown: {
+      length_m: Number(l.toFixed(4)),
+      width_m: Number(w.toFixed(4)),
+      depth_m: Number(d.toFixed(4)),
+      volume_cum: Number(volumeCum.toFixed(4)),
+      volume_brass: Number(volumeBrass.toFixed(4)),
+      cut_or_fill: cutOrFill,
+    },
+    brass_equivalent: Number(volumeBrass.toFixed(4)),
   };
 }
 

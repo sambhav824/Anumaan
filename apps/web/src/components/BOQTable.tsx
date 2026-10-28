@@ -215,10 +215,23 @@ export function BOQTable({
     gstPct
   );
 
+  const DEFAULT_RATES_BY_CATEGORY: Record<string, number> = {
+    earthwork: 220,
+    concrete: 5850,
+    masonry: 5200,
+    plaster: 285,
+    flooring: 950,
+    painting: 75,
+    steel: 68500,
+    road: 1650,
+    general: 1000,
+  };
+
   const handleAddItem = () => {
     if (!draftItem.description.trim()) return;
-    const amount = Math.round(draftItem.quantity * draftItem.unit_rate * 100) / 100;
-    const updated = [...items, { ...draftItem, amount }];
+    const effectiveRate = draftItem.unit_rate > 0 ? draftItem.unit_rate : (DEFAULT_RATES_BY_CATEGORY[draftItem.category] || 0);
+    const amount = Math.round(draftItem.quantity * effectiveRate * 100) / 100;
+    const updated = [...items, { ...draftItem, unit_rate: effectiveRate, amount }];
     onItemsChange(updated);
     setShowAddRow(false);
     setDraftItem({
@@ -473,7 +486,16 @@ export function BOQTable({
                     </td>
 
                     <td className="py-2.5 px-3 text-right font-mono font-bold text-[#102F57]">
-                      ₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      {item.unit_rate <= 0 ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-[#64748B] text-xs font-medium">₹0.00</span>
+                          <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            Rate required
+                          </span>
+                        </div>
+                      ) : (
+                        <span>₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                      )}
                     </td>
 
                     <td className="py-2.5 px-3 text-center">

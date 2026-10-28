@@ -21,6 +21,8 @@ import {
   calculatePainting,
   calculateReinforcement,
   calculateRoadLayers,
+  calculateRoadArea,
+  calculateRoadEarthwork,
   calculateRoadCrossSections,
   CalculationResult,
   OpeningDimension,
@@ -61,6 +63,8 @@ export type FormulaType =
   | "painting"
   | "reinforcement"
   | "road_layers"
+  | "road_area"
+  | "road_earthwork"
   | "road_cross_sections";
 
 interface MeasurementCalculatorModalProps {
@@ -102,6 +106,8 @@ export function MeasurementCalculatorModal({
   const [wastagePct, setWastagePct] = useState<number>(0.0);
   const [swellFactor, setSwellFactor] = useState<number>(0.0);
   const [compactionFactor, setCompactionFactor] = useState<number>(1.25);
+  const [thicknessUnit, setThicknessUnit] = useState<string>("mm");
+  const [cutOrFill, setCutOrFill] = useState<"cut" | "fill">("cut");
 
   // Openings (for wall area, brickwork, plaster)
   const [openings, setOpenings] = useState<OpeningDimension[]>([
@@ -136,6 +142,8 @@ export function MeasurementCalculatorModal({
         "painting",
         "reinforcement",
         "road_layers",
+        "road_area",
+        "road_earthwork",
         "road_cross_sections",
       ].includes(initialFormula);
       setActiveTab(isEng ? "engineering" : "basic");
@@ -148,6 +156,7 @@ export function MeasurementCalculatorModal({
       if (initialDetails.thickness !== undefined) setThickness(Number(initialDetails.thickness));
       if (initialDetails.area !== undefined) setArea(Number(initialDetails.area));
       if (initialDetails.unit !== undefined) setUnit(initialDetails.unit);
+      if (initialDetails.cut_or_fill) setCutOrFill(initialDetails.cut_or_fill);
     }
   }, [initialFormula, initialDetails, isOpen]);
 
@@ -210,7 +219,13 @@ export function MeasurementCalculatorModal({
           res = calculateReinforcement(bars, wastagePct);
           break;
         case "road_layers":
-          res = calculateRoadLayers(length, width, thickness, compactionFactor, unit);
+          res = calculateRoadLayers(length, width, thickness, compactionFactor, unit, thicknessUnit);
+          break;
+        case "road_area":
+          res = calculateRoadArea(length, width, unit);
+          break;
+        case "road_earthwork":
+          res = calculateRoadEarthwork(length, width, depth, cutOrFill, unit);
           break;
         case "road_cross_sections":
           res = calculateRoadCrossSections(area1, area2, distance, unit === "m" ? "sqm" : "sqft", unit);
@@ -231,6 +246,8 @@ export function MeasurementCalculatorModal({
     height,
     depth,
     thickness,
+    thicknessUnit,
+    cutOrFill,
     countVal,
     weightVal,
     timeVal,
@@ -374,18 +391,20 @@ export function MeasurementCalculatorModal({
             <label className="block text-[11px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
               Select IS 1200 / MoRTH Standard:
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
               {[
-                { id: "excavation", label: t("calcTypes.excavation"), sub: "IS 1200 Pt 1" },
-                { id: "concrete", label: t("calcTypes.concrete"), sub: "IS 1200 Pt 2" },
-                { id: "slab_concrete", label: t("calcTypes.slab_concrete"), sub: "Plan Area × T" },
-                { id: "brickwork", label: t("calcTypes.brickwork"), sub: "IS 1200 Pt 3" },
-                { id: "plaster", label: t("calcTypes.plaster"), sub: "IS 1200 Pt 12" },
-                { id: "flooring", label: t("calcTypes.flooring"), sub: "IS 1200 Pt 11" },
-                { id: "painting", label: t("calcTypes.painting"), sub: "IS 1200 Pt 13" },
-                { id: "reinforcement", label: t("calcTypes.reinforcement"), sub: "IS 1786 BBS" },
-                { id: "road_layers", label: t("calcTypes.road_layers"), sub: "MoRTH Sec 400" },
-                { id: "road_cross_sections", label: t("calcTypes.road_cross_sections"), sub: "Avg End Area" },
+                { id: "excavation", label: t("calcTypes.excavation") || "Excavation", sub: "IS 1200 Pt 1" },
+                { id: "concrete", label: t("calcTypes.concrete") || "Plain Concrete", sub: "IS 1200 Pt 2" },
+                { id: "slab_concrete", label: t("calcTypes.slab_concrete") || "RCC Slab", sub: "Plan Area × T" },
+                { id: "brickwork", label: t("calcTypes.brickwork") || "Brick Masonry", sub: "IS 1200 Pt 3" },
+                { id: "plaster", label: t("calcTypes.plaster") || "Cement Plaster", sub: "IS 1200 Pt 12" },
+                { id: "flooring", label: t("calcTypes.flooring") || "Floor Tiles", sub: "IS 1200 Pt 11" },
+                { id: "painting", label: t("calcTypes.painting") || "Painting", sub: "IS 1200 Pt 13" },
+                { id: "reinforcement", label: t("calcTypes.reinforcement") || "Steel BBS", sub: "IS 1786 BBS" },
+                { id: "road_layers", label: t("calcTypes.road_layers") || "Road Layers", sub: "MoRTH Sec 400" },
+                { id: "road_area", label: "Road Area", sub: "MoRTH Sec 201" },
+                { id: "road_earthwork", label: "Road Earthwork", sub: "MoRTH Sec 301" },
+                { id: "road_cross_sections", label: t("calcTypes.road_cross_sections") || "Road Sections", sub: "Avg End Area" },
               ].map((f) => {
                 const active = formulaType === f.id;
                 return (
@@ -417,7 +436,7 @@ export function MeasurementCalculatorModal({
             </span>
 
             {/* Applicable Unit Selector */}
-            {["length", "area", "volume", "wall_area", "excavation", "concrete", "brickwork", "plaster", "flooring", "road_layers"].includes(formulaType) && (
+            {["length", "area", "volume", "wall_area", "excavation", "concrete", "brickwork", "plaster", "flooring", "road_layers", "road_area", "road_earthwork"].includes(formulaType) && (
               <div className="flex items-center gap-1.5">
                 <label className="text-[11px] text-stone-600 font-medium">Unit:</label>
                 <select
@@ -824,7 +843,7 @@ export function MeasurementCalculatorModal({
           {formulaType === "slab_concrete" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] text-stone-600 font-medium mb-1">Plan Area (sqm)</label>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Plan Area ({unit === "m" ? "sqm" : "sqft"}) *</label>
                 <input
                   type="number"
                   step="any"
@@ -834,12 +853,565 @@ export function MeasurementCalculatorModal({
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-stone-600 font-medium mb-1">Slab Thickness ({unit})</label>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Slab Thickness ({unit}) *</label>
                 <input
                   type="number"
                   step="any"
                   value={thickness}
                   onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Brickwork */}
+          {formulaType === "brickwork" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Wall Length ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={length}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Wall Height ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={height}
+                    onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Wall Thickness ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={thickness}
+                    onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Openings Deductions */}
+              <div className="p-3 bg-white rounded-lg border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-stone-800">
+                    Door & Window Openings to Deduct:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddOpening}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Opening</span>
+                  </button>
+                </div>
+                {openings.map((op, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Door D1"
+                      value={op.description}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].description = e.target.value;
+                        setOpenings(updated);
+                      }}
+                      className="flex-1 px-2 py-1 text-xs border border-stone-300 rounded"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={`W (${unit})`}
+                      value={op.length}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].length = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
+                      }}
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={`H (${unit})`}
+                      value={op.height}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].height = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
+                      }}
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Qty"
+                      value={op.count || 1}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].count = parseInt(e.target.value) || 1;
+                        setOpenings(updated);
+                      }}
+                      className="w-12 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOpening(idx)}
+                      className="text-stone-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Plastering */}
+          {formulaType === "plaster" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Wall Length ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={length}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Wall Height ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={height}
+                    onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Plaster Sides *</label>
+                  <select
+                    value={sides}
+                    onChange={(e) => setSides(parseInt(e.target.value) || 1)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs bg-white"
+                  >
+                    <option value={1}>1 Side (Single face)</option>
+                    <option value={2}>2 Sides (Both internal & external)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Openings Deductions */}
+              <div className="p-3 bg-white rounded-lg border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-stone-800">
+                    Openings to Deduct (IS 1200 Pt 12 deduction rules):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddOpening}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Opening</span>
+                  </button>
+                </div>
+                {openings.map((op, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Window W1"
+                      value={op.description}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].description = e.target.value;
+                        setOpenings(updated);
+                      }}
+                      className="flex-1 px-2 py-1 text-xs border border-stone-300 rounded"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={`W (${unit})`}
+                      value={op.length}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].length = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
+                      }}
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={`H (${unit})`}
+                      value={op.height}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].height = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
+                      }}
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOpening(idx)}
+                      className="text-stone-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Flooring */}
+          {formulaType === "flooring" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Room / Hall Length ({unit}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={length}
+                  onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Room / Hall Width ({unit}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Tile Cutting Wastage (%)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={wastagePct}
+                  onChange={(e) => setWastagePct(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Painting */}
+          {formulaType === "painting" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Total Surface Area ({unit === "m" ? "sqm" : "sqft"}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={area}
+                  onChange={(e) => setArea(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Number of Coats *</label>
+                <select
+                  value={coats}
+                  onChange={(e) => setCoats(parseInt(e.target.value) || 2)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs bg-white"
+                >
+                  <option value={1}>1 Coat (Touchup / Primer)</option>
+                  <option value={2}>2 Coats (Standard Emulsion)</option>
+                  <option value={3}>3 Coats (Premium Finish)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Coverage ({unit === "m" ? "sqm/L" : "sqft/L"})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={coverage}
+                  onChange={(e) => setCoverage(parseFloat(e.target.value) || 10)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Reinforcement BBS */}
+          {formulaType === "reinforcement" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <span className="font-semibold text-xs text-stone-800">
+                  Bar Bending Schedule (IS 1786:2008 Standard Mass):
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddBar}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Rebar</span>
+                </button>
+              </div>
+              {bars.map((bar, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-white p-2 border border-stone-200 rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Description / Mark"
+                    value={bar.description}
+                    onChange={(e) => {
+                      const updated = [...bars];
+                      updated[idx].description = e.target.value;
+                      setBars(updated);
+                    }}
+                    className="flex-1 px-2 py-1 text-xs border border-stone-300 rounded"
+                  />
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-stone-500 font-medium">Dia:</span>
+                    <select
+                      value={bar.diameter_mm}
+                      onChange={(e) => {
+                        const updated = [...bars];
+                        updated[idx].diameter_mm = parseInt(e.target.value) || 8;
+                        setBars(updated);
+                      }}
+                      className="px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    >
+                      {[6, 8, 10, 12, 16, 20, 25, 28, 32].map((d) => (
+                        <option key={d} value={d}>{d} mm</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-stone-500 font-medium">Cut L:</span>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="m"
+                      value={bar.length}
+                      onChange={(e) => {
+                        const updated = [...bars];
+                        updated[idx].length = parseFloat(e.target.value) || 0;
+                        setBars(updated);
+                      }}
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-stone-500 font-medium">Count:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Qty"
+                      value={bar.count || 1}
+                      onChange={(e) => {
+                        const updated = [...bars];
+                        updated[idx].count = parseInt(e.target.value) || 1;
+                        setBars(updated);
+                      }}
+                      className="w-12 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBar(idx)}
+                    className="text-stone-400 hover:text-red-600 p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Engineering: Road Pavement Layers */}
+          {formulaType === "road_layers" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Road Length ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={length}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Carriageway Width ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={width}
+                    onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] text-stone-600 font-medium">Compacted Thickness *</label>
+                    <select
+                      value={thicknessUnit}
+                      onChange={(e) => setThicknessUnit(e.target.value)}
+                      className="text-[10px] border border-stone-300 rounded px-1 py-0.5 bg-white font-mono"
+                    >
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={thickness}
+                    onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
+                    placeholder={thicknessUnit === "mm" ? "e.g. 150 or 200" : "e.g. 0.15"}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Compaction Factor</label>
+                  <select
+                    value={compactionFactor}
+                    onChange={(e) => setCompactionFactor(parseFloat(e.target.value) || 1.0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs bg-white font-mono"
+                  >
+                    <option value={1.0}>1.00 (Asphalt / Bituminous DBM/BC)</option>
+                    <option value={1.20}>1.20 (WMM Wet Mix Macadam)</option>
+                    <option value={1.25}>1.25 (GSB Granular Sub-base)</option>
+                    <option value={1.30}>1.30 (Soil Embankment Subgrade)</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-[11px] text-[#64748B]">
+                MoRTH Specification: Primary contract quantity is calculated as compacted volume in cum. Loose volume is reported for quarry dispatch.
+              </p>
+            </div>
+          )}
+
+          {/* Engineering: Road Area */}
+          {formulaType === "road_area" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Road Corridor Length ({unit}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={length}
+                  onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Carriageway / Formation Width ({unit}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Road Earthwork */}
+          {formulaType === "road_earthwork" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Road Length ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={length}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Formation Width ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={width}
+                    onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Average Depth ({unit}) *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={depth}
+                    onChange={(e) => setDepth(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">Earthwork Scope *</label>
+                  <select
+                    value={cutOrFill}
+                    onChange={(e) => setCutOrFill(e.target.value as "cut" | "fill")}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs bg-white"
+                  >
+                    <option value="cut">Roadway Cut Excavation</option>
+                    <option value="fill">Embankment Fill</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Road Cross-Sections (Average End Area) */}
+          {formulaType === "road_cross_sections" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Section 1 Area ({unit === "m" ? "sqm" : "sqft"}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={area1}
+                  onChange={(e) => setArea1(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Section 2 Area ({unit === "m" ? "sqm" : "sqft"}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={area2}
+                  onChange={(e) => setArea2(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Chainage Distance ({unit}) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={distance}
+                  onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>

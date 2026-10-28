@@ -683,10 +683,17 @@ def calculate_road_layers(
     - Loose volume (using compaction factor e.g. 1.20 to 1.25 for WMM/GSB) is reported
       for quarry truck dispatch and material haulage.
     """
-    t_unit = thickness_unit if thickness_unit else unit
+    raw_thick = to_decimal(compacted_thickness)
+    if thickness_unit:
+        T = convert_length_to_m(raw_thick, thickness_unit)
+    elif raw_thick >= Decimal("1.0") and unit.lower().strip() in ("m", "meter", "meters", "metre", "metres"):
+        # Civil Engineering standard: Layer thickness >= 1.0 without unit in road context is millimetres
+        T = raw_thick * MM_TO_METERS
+    else:
+        T = convert_length_to_m(raw_thick, unit)
+
     L = convert_length_to_m(to_decimal(length), unit)
     W = convert_length_to_m(to_decimal(width), unit)
-    T = convert_length_to_m(to_decimal(compacted_thickness), t_unit)
 
     if L <= 0 or W <= 0 or T <= 0:
         raise ValueError("Road layer length, width, and thickness must be strictly positive.")
@@ -721,6 +728,63 @@ def calculate_road_layers(
         "formula": formula_str,
         "standard_reference": "MoRTH (5th Revision, Clauses 401.8, 406.8)",
         "calculation_type": "road_layers",
+    }
+
+
+def calculate_road_area(
+    length: Any,
+    width: Any,
+    unit: str = "m"
+) -> Dict[str, Any]:
+    """Computes carriageway or road corridor surface area per MoRTH Section 201."""
+    L = convert_length_to_m(to_decimal(length), unit)
+    W = convert_length_to_m(to_decimal(width), unit)
+    if L <= 0 or W <= 0:
+        raise ValueError("Road length and width must be strictly positive.")
+
+    area_sqm = L * W
+    area_sqft = area_sqm * SQM_TO_SQFT
+    formula_str = f"Road Area = Length ({L:.2f}m) \xd7 Width ({W:.2f}m) = {area_sqm:.2f} sqm ({area_sqft:.2f} sq.ft)"
+
+    return {
+        "quantity": quantize_qty(area_sqm),
+        "unit": "sqm",
+        "area_sqm": quantize_qty(area_sqm),
+        "area_sqft": quantize_qty(area_sqft),
+        "formula": formula_str,
+        "standard_reference": "MoRTH Section 201 & IRC Standard Specifications",
+        "calculation_type": "road_area",
+    }
+
+
+def calculate_road_earthwork(
+    length: Any,
+    width: Any,
+    depth: Any,
+    cut_or_fill: str = "cut",
+    unit: str = "m"
+) -> Dict[str, Any]:
+    """Computes road cut or fill excavation quantities per MoRTH Section 301."""
+    L = convert_length_to_m(to_decimal(length), unit)
+    W = convert_length_to_m(to_decimal(width), unit)
+    D = convert_length_to_m(to_decimal(depth), unit)
+    if L <= 0 or W <= 0 or D <= 0:
+        raise ValueError("Road earthwork length, width, and depth must be strictly positive.")
+
+    vol_cum = L * W * D
+    vol_brass = vol_cum / BRASS_TO_CUM
+    action = "Embankment Fill" if cut_or_fill == "fill" else "Roadway Cut Excavation"
+    formula_str = f"Road Earthwork ({action}) = {L:.2f}m \xd7 {W:.2f}m \xd7 {D:.2f}m = {vol_cum:.2f} cum ({vol_brass:.2f} Brass)"
+
+    return {
+        "quantity": quantize_qty(vol_cum),
+        "unit": "cum",
+        "volume_cum": quantize_qty(vol_cum),
+        "volume_brass": quantize_qty(vol_brass),
+        "cut_or_fill": cut_or_fill,
+        "formula": formula_str,
+        "standard_reference": "MoRTH Section 301 (Roadway Excavation & Embankment)",
+        "calculation_type": "road_earthwork",
     }
 
 

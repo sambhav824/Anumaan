@@ -286,7 +286,7 @@ export default function EstimateDetailPage() {
     setDrawingAnalysisResult(null);
   };
 
-  // Real-time Material Takeoff & Cost Classification Engine
+  // Real-time Material Takeoff & Cost Classification Engine (IS 1200 / MoRTH Standards)
   const materialSummary = React.useMemo(() => {
     let matSub = 0;
     let labSub = 0;
@@ -298,7 +298,18 @@ export default function EstimateDetailPage() {
     let sandCum = 0;
     let aggCum = 0;
     let bricksNos = 0;
+    let bitumenKg = 0;
     let labourDays = 0;
+
+    // Check if separate steel line item exists to avoid double-counting
+    const hasDedicatedSteel = items.some((it) => {
+      const d = (it.description || "").toLowerCase();
+      const u = (it.unit || "").toLowerCase();
+      return (
+        (d.includes("steel") || d.includes("tmt") || d.includes("rebar") || d.includes("reinforcement")) &&
+        (u === "kg" || u === "tonne" || u === "ton" || u === "mt" || u === "qtl")
+      );
+    });
 
     for (const it of items) {
       const q = Number(it.quantity) || 0;
@@ -308,25 +319,153 @@ export default function EstimateDetailPage() {
       const cat = (it.category || "").toLowerCase();
       const u = (it.unit || "").toLowerCase();
 
-      if (cat === "labour" || u === "day" || desc.includes("labour") || desc.includes("mason") || desc.includes("helper") || desc.includes("carpenter")) {
+      // Direct Cost Classification
+      if (cat === "labour" || u === "day" || u === "manday" || desc.includes("labour charges") || desc.includes("helper charges")) {
         labSub += a;
-        if (u === "day") labourDays += q;
-      } else if (cat === "equipment" || desc.includes("jcb") || desc.includes("mixer") || desc.includes("compactor") || desc.includes("loader")) {
+        if (u === "day" || u === "manday") labourDays += q;
+      } else if (cat === "equipment" || desc.includes("jcb") || desc.includes("compactor") || desc.includes("roller hire")) {
         eqSub += a;
-      } else if (cat === "composite" || desc.includes("complete with material and labour") || desc.includes("composite")) {
+      } else if (
+        cat === "concrete" ||
+        cat === "masonry" ||
+        cat === "plaster" ||
+        cat === "flooring" ||
+        cat === "road" ||
+        cat === "earthwork" ||
+        desc.includes("concrete") ||
+        desc.includes("masonry") ||
+        desc.includes("plastering") ||
+        desc.includes("tiling") ||
+        desc.includes("macadam")
+      ) {
+        // Complete composite civil work
         compSub += a;
       } else {
         matSub += a;
       }
 
+      // 1. Raw Materials (Direct Items)
       if (desc.includes("cement") && (u === "bag" || u === "bags")) cementBags += q;
       if ((desc.includes("steel") || desc.includes("tmt") || desc.includes("rebar")) && u === "kg") steelKg += q;
       if ((desc.includes("steel") || desc.includes("tmt") || desc.includes("rebar")) && (u === "tonne" || u === "ton" || u === "mt")) steelKg += q * 1000;
+      if ((desc.includes("steel") || desc.includes("tmt") || desc.includes("rebar")) && u === "qtl") steelKg += q * 100;
       if (desc.includes("sand") && (u === "cum" || u === "m3")) sandCum += q;
       if (desc.includes("sand") && (u === "brass" || u === "br")) sandCum += q * 2.8317;
       if (desc.includes("aggregate") && (u === "cum" || u === "m3")) aggCum += q;
       if (desc.includes("aggregate") && (u === "brass" || u === "br")) aggCum += q * 2.8317;
       if ((desc.includes("brick") || desc.includes("block")) && (u === "nos" || u === "no" || u === "piece" || u === "pieces")) bricksNos += q;
+      if (desc.includes("bitumen") && (u === "kg" || u === "litre")) bitumenKg += q;
+      if (desc.includes("bitumen") && (u === "tonne" || u === "ton")) bitumenKg += q * 1000;
+
+      // 2. Plain Cement Concrete (PCC) Constituent Materials (IS 456 / CPWD)
+      if (desc.includes("pcc") || desc.includes("plain cement concrete") || desc.includes("lean concrete")) {
+        const is148 = desc.includes("1:4:8");
+        const is124 = desc.includes("1:2:4");
+        const cBags = is148 ? 3.4 : is124 ? 6.3 : 4.5;
+        const sCum = is148 ? 0.47 : 0.45;
+        const aCum = is148 ? 0.95 : 0.90;
+        cementBags += q * cBags;
+        sandCum += q * sCum;
+        aggCum += q * aCum;
+        labourDays += q * 0.85;
+      }
+
+      // 3. Reinforced Cement Concrete (RCC M20/M25/M30) (IS 456:2000)
+      if (
+        (desc.includes("rcc") || desc.includes("reinforced cement") || desc.includes("m20") || desc.includes("m25") || desc.includes("m30")) &&
+        (u === "cum" || u === "m3")
+      ) {
+        const isM25 = desc.includes("m25");
+        const isM30 = desc.includes("m30");
+        const cBags = isM30 ? 9.0 : isM25 ? 8.2 : 6.8;
+        cementBags += q * cBags;
+        sandCum += q * 0.45;
+        aggCum += q * 0.85;
+        if (!hasDedicatedSteel) {
+          steelKg += q * (isM25 ? 85 : 75);
+        }
+        labourDays += q * 1.80;
+      }
+
+      // 4. Brick Masonry / AAC Blocks (IS 1200 Part 3)
+      if (desc.includes("brick") || desc.includes("masonry") || desc.includes("aac block")) {
+        if (u === "cum" || u === "m3") {
+          const isAac = desc.includes("aac");
+          if (isAac) {
+            bricksNos += q * 55;
+            cementBags += q * 0.8;
+          } else {
+            bricksNos += q * 500;
+            const is14 = desc.includes("1:4");
+            cementBags += q * (is14 ? 1.8 : 1.25);
+            sandCum += q * 0.25;
+          }
+          labourDays += q * 1.20;
+        } else if (u === "sqm" || u === "m2" || u === "sq.m") {
+          bricksNos += q * 55;
+          cementBags += q * 0.15;
+          sandCum += q * 0.03;
+          labourDays += q * 0.35;
+        }
+      }
+
+      // 5. Plastering (IS 1200 Part 12)
+      if (desc.includes("plaster") || desc.includes("plastering")) {
+        if (u === "sqm" || u === "m2" || u === "sq.m") {
+          cementBags += q * 0.14;
+          sandCum += q * 0.021;
+          labourDays += q * 0.25;
+        } else if (u === "cum" || u === "m3") {
+          cementBags += q * 6.5;
+          sandCum += q * 1.0;
+          labourDays += q * 3.0;
+        }
+      }
+
+      // 6. Flooring & Tiling (IS 1200 Part 11)
+      if (desc.includes("tile") || desc.includes("flooring") || desc.includes("vitrified") || desc.includes("ceramic")) {
+        if (u === "sqm" || u === "m2" || u === "sq.m") {
+          cementBags += q * 0.22;
+          sandCum += q * 0.035;
+          labourDays += q * 0.35;
+        }
+      }
+
+      // 7. Road Works (MoRTH Specifications: GSB, WMM, Bituminous DBM/BC)
+      if (desc.includes("gsb") || desc.includes("granular sub-base") || desc.includes("sub base")) {
+        aggCum += q * 1.25;
+        labourDays += q * 0.15;
+      }
+      if (desc.includes("wmm") || desc.includes("wet mix macadam")) {
+        aggCum += q * 1.20;
+        labourDays += q * 0.15;
+      }
+      if (desc.includes("dbm") || desc.includes("dense bituminous") || (desc.includes("bituminous") && desc.includes("binder"))) {
+        bitumenKg += q * 108; // 108 kg VG-30 bitumen per cum (4.5% wt of mix)
+        aggCum += q * 1.45;
+        labourDays += q * 0.20;
+      }
+      if (desc.includes("bc") || desc.includes("bituminous concrete") || desc.includes("wearing course")) {
+        if (u === "sqm" || u === "m2") {
+          bitumenKg += q * 3.6; // 3.6 kg bitumen per sqm for 30mm/40mm layer
+          aggCum += q * 0.045;
+          labourDays += q * 0.03;
+        } else {
+          bitumenKg += q * 120;
+          aggCum += q * 1.45;
+          labourDays += q * 0.20;
+        }
+      }
+      if (desc.includes("prime coat") || desc.includes("tack coat")) {
+        bitumenKg += q * (desc.includes("prime") ? 0.75 : 0.25);
+      }
+
+      // 8. Earthwork Excavation Benchmarks
+      if (desc.includes("excavat") || desc.includes("earthwork")) {
+        if (u === "cum" || u === "m3") {
+          labourDays += q * 0.18;
+        }
+      }
     }
 
     return {
@@ -340,6 +479,8 @@ export default function EstimateDetailPage() {
       sandCum: Math.round(sandCum * 10) / 10,
       aggCum: Math.round(aggCum * 10) / 10,
       bricksNos: Math.round(bricksNos),
+      bitumenKg: Math.round(bitumenKg),
+      bitumenTonnes: Math.round((bitumenKg / 1000) * 100) / 100,
       labourDays: Math.round(labourDays),
     };
   }, [items]);
@@ -582,16 +723,24 @@ export default function EstimateDetailPage() {
               </div>
 
               <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-0.5">
-                <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Aggregates</span>
+                <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Aggregates / GSB</span>
                 <span className="text-base font-bold font-mono text-[#102F57]">{materialSummary.aggCum}</span>
-                <span className="text-[10px] text-[#64748B]"> cum (10/20mm)</span>
+                <span className="text-[10px] text-[#64748B]"> cum (10/20/40mm)</span>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-0.5">
-                <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Bricks / AAC</span>
-                <span className="text-base font-bold font-mono text-[#102F57]">{materialSummary.bricksNos}</span>
-                <span className="text-[10px] text-[#64748B]"> nos / units</span>
-              </div>
+              {materialSummary.bitumenKg > 0 ? (
+                <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-0.5">
+                  <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Bitumen / Asphalt</span>
+                  <span className="text-base font-bold font-mono text-[#102F57]">{materialSummary.bitumenTonnes}</span>
+                  <span className="text-[10px] text-[#64748B]"> tonnes ({materialSummary.bitumenKg} kg)</span>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-0.5">
+                  <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Bricks / AAC</span>
+                  <span className="text-base font-bold font-mono text-[#102F57]">{materialSummary.bricksNos}</span>
+                  <span className="text-[10px] text-[#64748B]"> nos / units</span>
+                </div>
+              )}
 
               <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-0.5">
                 <span className="text-[10px] uppercase font-semibold text-[#64748B] block">Total Labour</span>
