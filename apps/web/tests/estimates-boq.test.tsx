@@ -194,7 +194,7 @@ describe("BOQTable Component Tests", () => {
 
     // Check financial values
     expect(screen.getByText("₹60,000.00")).toBeInTheDocument(); // Subtotal
-    expect(screen.getByText("₹75,048.00")).toBeInTheDocument(); // Grand Total
+    expect(screen.getByText("₹76,464.00")).toBeInTheDocument(); // Grand Total (no discount)
   });
 
   it("duplicates an item when duplicate button is clicked", () => {

@@ -13,7 +13,14 @@ from app.routers import (
     projects_router,
     estimates_router,
     quotations_router,
+    rates_router,
+    global_rates_router,
+    expenses_router,
+    drawings_router,
+    geolocation_router,
+    invoices_router,
 )
+
 
 
 @asynccontextmanager
@@ -52,6 +59,13 @@ app.include_router(clients_router)
 app.include_router(projects_router)
 app.include_router(estimates_router)
 app.include_router(quotations_router)
+app.include_router(global_rates_router)
+app.include_router(rates_router)
+app.include_router(expenses_router)
+app.include_router(drawings_router)
+app.include_router(geolocation_router)
+app.include_router(invoices_router)
+
 
 
 @app.get("/")

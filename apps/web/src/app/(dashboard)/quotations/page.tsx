@@ -23,6 +23,7 @@ import {
 import { useTranslation } from "@/context/I18nContext";
 import { useOrg } from "@/context/OrgContext";
 import { api, Quotation } from "@/lib/api";
+import { formatIndianCurrency } from "@/lib/calculations";
 
 export default function QuotationsPage() {
   const { t } = useTranslation();
@@ -149,32 +150,32 @@ export default function QuotationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-devanagari text-anumaan-charcoal-900 tracking-tight">
+          <h1 className="text-2xl font-bold font-heading font-devanagari text-[#102F57] tracking-tight">
             {t("quotations.title")}
           </h1>
-          <p className="text-sm text-anumaan-charcoal-600 font-devanagari mt-1">
+          <p className="text-sm text-[#64748B] font-devanagari mt-1">
             {t("quotations.subtitle")}
           </p>
         </div>
         <Link
           href="/quotations/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-anumaan-gold-600 hover:bg-anumaan-gold-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors focus:ring-2 focus:ring-anumaan-gold-500 focus:outline-none"
+          className="btn-accent px-4 py-2 text-sm rounded-lg inline-flex items-center justify-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          <span className="font-devanagari">{t("quotations.newQuotation")}</span>
+          <span className="font-devanagari font-semibold">{t("quotations.newQuotation")}</span>
         </Link>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-anumaan-border shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="bg-white p-4 rounded-xl border border-[#DCE4EE] shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-anumaan-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder={t("quotations.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-anumaan-border rounded-lg bg-anumaan-beige-50/40 text-anumaan-charcoal-900 focus:outline-none focus:ring-2 focus:ring-anumaan-gold-500"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-[#DCE4EE] rounded-lg bg-[#F3F6FA] text-[#263445] focus:outline-hidden focus:ring-1 focus:ring-[#102F57]"
           />
         </form>
 
@@ -183,10 +184,10 @@ export default function QuotationsPage() {
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors capitalize whitespace-nowrap border ${
                 statusFilter === st
-                  ? "bg-anumaan-charcoal-800 text-white shadow-sm"
-                  : "bg-anumaan-beige-100 text-anumaan-charcoal-700 hover:bg-anumaan-beige-200"
+                  ? "bg-[#102F57] text-white border-[#102F57] shadow-sm"
+                  : "bg-[#F3F6FA] text-[#64748B] border-[#DCE4EE] hover:bg-[#E8EEF5]"
               }`}
             >
               {st === "all" ? t("quotations.filterAll") : t(`quotations.status${st.charAt(0).toUpperCase() + st.slice(1)}`)}
@@ -196,10 +197,10 @@ export default function QuotationsPage() {
       </div>
 
       {/* Quotations List Table */}
-      <div className="bg-white rounded-xl border border-anumaan-border shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#DCE4EE] shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-anumaan-charcoal-500">
-            <div className="w-8 h-8 border-2 border-anumaan-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="p-12 text-center text-[#64748B]">
+            <div className="w-8 h-8 border-2 border-[#102F57] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-sm font-devanagari">{t("quotations.loadingQuotations")}</p>
           </div>
         ) : error ? (
@@ -208,25 +209,25 @@ export default function QuotationsPage() {
           </div>
         ) : quotations.length === 0 ? (
           <div className="p-16 text-center">
-            <FileSpreadsheet className="w-12 h-12 text-anumaan-charcoal-300 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-anumaan-charcoal-800 font-devanagari">
+            <FileSpreadsheet className="w-12 h-12 text-[#64748B]/40 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-[#102F57] font-devanagari">
               {t("quotations.emptyList")}
             </h3>
-            <p className="text-sm text-anumaan-charcoal-500 font-devanagari mt-1 max-w-sm mx-auto">
+            <p className="text-sm text-[#64748B] font-devanagari mt-1 max-w-sm mx-auto">
               {t("quotations.createFirst")}
             </p>
             <Link
               href="/quotations/new"
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-anumaan-gold-600 text-white text-sm font-medium rounded-lg hover:bg-anumaan-gold-700"
+              className="btn-accent inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm rounded-lg"
             >
               <Plus className="w-4 h-4" />
-              <span>{t("quotations.newQuotation")}</span>
+              <span className="font-semibold">{t("quotations.newQuotation")}</span>
             </Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-anumaan-beige-50/70 border-b border-anumaan-border text-xs text-anumaan-charcoal-600 font-semibold font-devanagari uppercase">
+              <thead className="bg-[#E8EEF5] border-b border-[#DCE4EE] text-xs text-[#102F57] font-semibold font-devanagari uppercase">
                 <tr>
                   <th className="px-5 py-3.5">{t("quotations.quotationNumber")}</th>
                   <th className="px-5 py-3.5">{t("quotations.clientDetails")}</th>
@@ -237,24 +238,24 @@ export default function QuotationsPage() {
                   <th className="px-5 py-3.5 text-center">{t("quotations.actions")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-anumaan-border-light">
+              <tbody className="divide-y divide-[#DCE4EE]">
                 {quotations.map((q) => (
-                  <tr key={q.id} className="hover:bg-anumaan-beige-50/30 transition-colors">
-                    <td className="px-5 py-4 font-mono font-semibold text-anumaan-charcoal-900">
+                  <tr key={q.id} className="hover:bg-[#F3F6FA] transition-colors">
+                    <td className="px-5 py-4 font-mono font-semibold text-[#102F57]">
                       <Link
                         href={`/quotations/${q.id}`}
-                        className="text-anumaan-gold-700 hover:text-anumaan-gold-800 hover:underline"
+                        className="text-[#102F57] hover:underline"
                       >
                         {q.quotation_number}
                       </Link>
-                      <div className="text-[11px] text-anumaan-charcoal-400 font-sans font-normal uppercase">
+                      <div className="text-[11px] text-[#64748B] font-sans font-normal uppercase">
                         {q.language}
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-anumaan-charcoal-800 font-medium">
+                    <td className="px-5 py-4 text-[#263445] font-medium">
                       {q.client_name || "-"}
                     </td>
-                    <td className="px-5 py-4 text-anumaan-charcoal-700">
+                    <td className="px-5 py-4 text-[#64748B]">
                       {q.project_name || "-"}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
@@ -265,18 +266,18 @@ export default function QuotationsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-anumaan-charcoal-600 text-xs whitespace-nowrap">
+                    <td className="px-5 py-4 text-[#64748B] text-xs whitespace-nowrap">
                       {q.valid_until_date || "-"}
                     </td>
-                    <td className="px-5 py-4 text-right font-semibold text-anumaan-charcoal-900 whitespace-nowrap">
-                      ₹ {Number(q.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    <td className="px-5 py-4 text-right font-mono font-bold text-[#102F57] whitespace-nowrap">
+                      {formatIndianCurrency(q.total_amount ?? q.grand_total)}
                     </td>
                     <td className="px-5 py-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         <Link
                           href={`/quotations/${q.id}`}
                           title={t("quotations.preview")}
-                          className="p-1.5 text-anumaan-charcoal-600 hover:text-anumaan-gold-700 hover:bg-anumaan-beige-100 rounded transition-colors"
+                          className="p-1.5 text-[#64748B] hover:text-[#102F57] hover:bg-[#EEF3F9] rounded transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Link>
@@ -285,7 +286,7 @@ export default function QuotationsPage() {
                           onClick={() => handleDownloadPdf(q)}
                           disabled={actionLoadingId === q.id}
                           title={t("quotations.downloadPdf")}
-                          className="p-1.5 text-anumaan-charcoal-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 text-[#64748B] hover:text-[#102F57] hover:bg-[#EEF3F9] rounded transition-colors disabled:opacity-50"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
@@ -294,7 +295,7 @@ export default function QuotationsPage() {
                           onClick={() => handleExportExcel(q)}
                           disabled={actionLoadingId === q.id}
                           title={t("quotations.exportExcel")}
-                          className="p-1.5 text-anumaan-charcoal-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 text-[#64748B] hover:text-[#16835D] hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
                         >
                           <Download className="w-4 h-4" />
                         </button>
@@ -303,7 +304,7 @@ export default function QuotationsPage() {
                           onClick={() => handleDuplicate(q.id)}
                           disabled={actionLoadingId === q.id}
                           title={t("quotations.duplicate")}
-                          className="p-1.5 text-anumaan-charcoal-600 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 text-[#64748B] hover:text-[#102F57] hover:bg-[#EEF3F9] rounded transition-colors disabled:opacity-50"
                         >
                           <Copy className="w-4 h-4" />
                         </button>

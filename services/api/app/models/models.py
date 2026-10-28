@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
     Numeric,
+    Integer,
+    Text,
     JSON,
     Boolean,
     Column,
@@ -66,6 +68,10 @@ class Organization(Base):
     projects = relationship("Project", back_populates="organization", cascade="all, delete-orphan")
     estimates = relationship("Estimate", back_populates="organization", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="organization", cascade="all, delete-orphan")
+    rate_items = relationship("RateItem", back_populates="organization", cascade="all, delete-orphan")
+    actual_expenses = relationship("ActualExpense", back_populates="organization", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="organization", cascade="all, delete-orphan")
+
 
 
 
@@ -133,6 +139,7 @@ class Project(Base):
     client = relationship("Client", back_populates="projects")
     estimates = relationship("Estimate", back_populates="project", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="project", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="project", cascade="all, delete-orphan")
 
 
 class Estimate(Base):
@@ -167,6 +174,8 @@ class Estimate(Base):
     creator = relationship("Profile", foreign_keys=[created_by])
     items = relationship("BOQItem", back_populates="estimate", cascade="all, delete-orphan", order_by="BOQItem.sort_order")
     quotations = relationship("Quotation", back_populates="estimate", cascade="all, delete-orphan")
+    actual_expenses = relationship("ActualExpense", back_populates="estimate", cascade="all, delete-orphan")
+
 
 
 class BOQItem(Base):
@@ -186,6 +195,7 @@ class BOQItem(Base):
     calculation_type = Column(String(50), nullable=True)
     calculation_details = Column(JSON, nullable=True)
     notes = Column(String(1000), nullable=True)
+    rate_item_id = Column(String(36), nullable=True)
     sort_order = Column(Numeric, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
@@ -241,4 +251,143 @@ class Quotation(Base):
     estimate = relationship("Estimate", back_populates="quotations")
     project = relationship("Project", back_populates="quotations")
     client = relationship("Client", back_populates="quotations")
+    creator = relationship("Profile", foreign_keys=[created_by])
+
+
+class RateItem(Base):
+    __tablename__ = "rate_items"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String(50), nullable=True)
+    name = Column(String(255), nullable=False)
+    category = Column(String(50), nullable=False, default="material")  # material, labour, equipment, other, composite, subcontract
+    rate_type = Column(String(50), nullable=False, default="raw_material")  # raw_material, labour_only, equipment_only, completed_work, composite
+    description = Column(String(1000), nullable=True)
+    unit = Column(String(20), nullable=False, default="nos")  # kg, tonne, bag, piece, cum, sqm, sqft, rmt, day, hour, ls
+    material_rate = Column(Numeric(14, 2), nullable=False, default=0.00)
+    labour_rate = Column(Numeric(14, 2), nullable=False, default=0.00)
+    equipment_rate = Column(Numeric(14, 2), nullable=False, default=0.00)
+    combined_rate = Column(Numeric(14, 2), nullable=False, default=0.00)
+    rate_source = Column(String(50), nullable=False, default="Manual")  # Manual, Supplier Quote, Schedule of Rates
+    supplier_or_source_name = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    supplier_or_location = Column(String(255), nullable=True)
+    region = Column(String(100), nullable=False, default="national_cpwd")
+    source_date = Column(String(50), nullable=True)
+    rate_status = Column(String(50), nullable=False, default="verified_source")  # verified_source, illustrative_needs_verification
+    specification = Column(String(500), nullable=True)
+    is_custom = Column(Boolean, nullable=False, default=False)
+    is_archived = Column(Boolean, nullable=False, default=False)
+    canonical_id = Column(String(36), nullable=True)
+    default_item_id = Column(String(50), nullable=True)
+    notes = Column(String(1000), nullable=True)
+    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="rate_items")
+    creator = relationship("Profile", foreign_keys=[created_by])
+
+
+class ActualExpense(Base):
+    __tablename__ = "actual_expenses"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    estimate_id = Column(String(36), ForeignKey("estimates.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(50), nullable=False, default="material")  # material, labour, equipment, transport, subcontract, other
+    description = Column(String(500), nullable=False)
+    amount = Column(Numeric(14, 2), nullable=False, default=0.00)
+    expense_date = Column(Date, nullable=False)
+    vendor_or_payee = Column(String(255), nullable=True)
+    invoice_or_voucher_ref = Column(String(100), nullable=True)
+    notes = Column(String(1000), nullable=True)
+    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="actual_expenses")
+    estimate = relationship("Estimate", back_populates="actual_expenses")
+    creator = relationship("Profile", foreign_keys=[created_by])
+
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    quotation_id = Column(String(36), ForeignKey("quotations.id", ondelete="SET NULL"), nullable=True, index=True)
+    invoice_number = Column(String(50), nullable=False)
+    milestone_name = Column(String(255), nullable=False)
+    percentage = Column(Numeric(5, 2), nullable=False, default=0.00)
+    amount = Column(Numeric(14, 2), nullable=False, default=0.00)
+    status = Column(String(20), nullable=False, default="draft")  # draft, sent, paid, partially_paid, overdue
+    due_date = Column(Date, nullable=True)
+    paid_date = Column(Date, nullable=True)
+    paid_amount = Column(Numeric(14, 2), nullable=False, default=0.00)
+    payment_method = Column(String(50), nullable=True)
+    notes = Column(String(1000), nullable=True)
+    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "invoice_number", name="uq_invoices_org_number"),
+    )
+
+    organization = relationship("Organization", back_populates="invoices")
+    project = relationship("Project", back_populates="invoices")
+    quotation = relationship("Quotation")
+    creator = relationship("Profile", foreign_keys=[created_by])
+
+
+class ConstructionDrawing(Base):
+    __tablename__ = "construction_drawings"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    estimate_id = Column(String(36), ForeignKey("estimates.id", ondelete="SET NULL"), nullable=True, index=True)
+    name = Column(String(255), nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_format = Column(String(20), nullable=False, default="PDF")
+    file_size_bytes = Column(Integer, nullable=False, default=0)
+    page_count = Column(Integer, nullable=False, default=1)
+    file_data_base64 = Column(Text, nullable=True)
+    storage_path = Column(String(500), nullable=True)
+    scale_calibration = Column(JSON, nullable=True)
+    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    organization = relationship("Organization")
+    project = relationship("Project")
+    measurements = relationship("DrawingMeasurement", back_populates="drawing", cascade="all, delete-orphan")
+
+
+class DrawingMeasurement(Base):
+    __tablename__ = "drawing_measurements"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    drawing_id = Column(String(36), ForeignKey("construction_drawings.id", ondelete="CASCADE"), nullable=False, index=True)
+    page_number = Column(Integer, nullable=False, default=1)
+    name = Column(String(255), nullable=False)
+    measurement_type = Column(String(50), nullable=False)  # "length", "area", "count"
+    quantity = Column(Numeric(14, 4), nullable=False, default=0.0000)
+    unit = Column(String(20), nullable=False, default="m")
+    coordinates = Column(JSON, nullable=True)
+    construction_mapping = Column(JSON, nullable=True)
+    is_confirmed = Column(Boolean, nullable=False, default=False)
+    notes = Column(String(1000), nullable=True)
+    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    drawing = relationship("ConstructionDrawing", back_populates="measurements")
     creator = relationship("Profile", foreign_keys=[created_by])

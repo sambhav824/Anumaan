@@ -4,15 +4,37 @@
 
 @layer base {
   :root {
-    --background: #FFFFFF;
-    --foreground: #18191B;
+    --brand-navy: #102F57;
+    --brand-navy-hover: #0B2240;
+    --brand-navy-light: #EEF3F9;
+    --brand-orange: #F7931E;
+    --brand-orange-hover: #E28113;
+    --brand-orange-light: #FFF6EB;
+    --brand-bg: #F3F6FA;
+    --brand-surface: #FFFFFF;
+    --brand-text-primary: #263445;
+    --brand-text-secondary: #64748B;
+    --brand-border: #DCE4EE;
+    --brand-border-light: #EAEFF5;
+    --brand-table-header: #E8EEF5;
+    --brand-success: #16835D;
+    --brand-warning: #B86B08;
+    --brand-error: #C62828;
+
+    --background: #F3F6FA;
+    --foreground: #263445;
   }
 
   body {
-    background-color: #FCFAF7;
-    color: #18191B;
+    background-color: #F3F6FA;
+    color: #263445;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #102F57;
+    font-family: var(--font-manrope), var(--font-inter), var(--font-noto-sans-devanagari), sans-serif;
   }
 
   /* Devanagari typography fine-tuning to prevent line collisions and clipping */
@@ -20,3 +42,33 @@
     line-height: 1.45;
   }
 }
+
+@layer components {
+  /* Consistent Brand Button System */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#102F57] hover:bg-[#0B2240] text-white font-medium text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#102F57]/30 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#F7931E] hover:bg-[#E28113] text-[#102F57] font-semibold text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E]/40 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-[#F3F6FA] text-[#102F57] border border-[#DCE4EE] font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#102F57]/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-destructive {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#C62828] hover:bg-[#A81F1F] text-white font-medium text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#C62828]/40 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Card styling */
+  .card-surface {
+    @apply bg-white rounded-xl border border-[#DCE4EE] shadow-sm;
+  }
+
+  /* Table Header */
+  .table-header {
+    @apply bg-[#E8EEF5] border-b border-[#DCE4EE] text-[#263445] font-semibold;
+  }
+}
+

@@ -27,9 +27,11 @@ export type ConstructionUnit =
   | "nos";
 
 export interface OpeningDimension {
-  length: number;
+  length?: number;
+  width?: number;
   height: number;
   count?: number;
+  name?: string;
   description?: string;
   deduction_pct?: number; // Custom percentage override if specified
 }
@@ -277,7 +279,7 @@ export function calculateBrickwork(
   const breakdownOpenings: string[] = [];
 
   for (const op of openings) {
-    const opL = toMetres(op.length, unit);
+    const opL = toMetres(op.length ?? op.width ?? 0, unit);
     const opH = toMetres(op.height, unit);
     const count = op.count || 1;
     const opFaceArea = opL * opH;
@@ -352,7 +354,7 @@ export function calculatePlaster(
   const breakdownOpenings: string[] = [];
 
   for (const op of openings) {
-    const opL = toMetres(op.length, unit);
+    const opL = toMetres(op.length ?? op.width ?? 0, unit);
     const opH = toMetres(op.height, unit);
     const count = op.count || 1;
     const singleOpArea = opL * opH;
@@ -676,6 +678,95 @@ export function calculateRoadCrossSections(
   };
 }
 
+// 10b. Boundary Wall Civil Calculations (IS 1200)
+export function calculateBoundaryWall(
+  lengthM: number,
+  heightM: number,
+  thicknessMm = 230,
+  masonryType = "clay_brick",
+  gateWidthM = 0,
+  gateHeightM = 0,
+  foundationDepthM = 0.8
+): CalculationResult {
+  if (lengthM <= 0 || heightM <= 0 || thicknessMm <= 0) {
+    throw new Error("Wall length, height, and thickness must be strictly positive.");
+  }
+
+  const L = lengthM;
+  const H = heightM;
+  const T = thicknessMm / 1000.0;
+  const grossArea = L * H;
+  const gateArea = (gateWidthM || 0) * (gateHeightM || 0);
+  const netArea = Math.max(0, grossArea - gateArea);
+  const masonryVol = Math.round(netArea * T * 10000) / 10000;
+
+  // Bricks count (approx 525 per cum with mortar and wastage)
+  const bricksCount = Math.round(masonryVol * 525);
+  // Excavation
+  const excavationVol = Math.round(L * (T + 0.3) * foundationDepthM * 10000) / 10000;
+  // PCC 1:4:8
+  const pccVol = Math.round(L * (T + 0.2) * 0.15 * 10000) / 10000;
+  // Plaster both sides + top
+  const plasterArea = Math.round(((netArea * 2) + (L * T)) * 100) / 100;
+
+  const formula = `Net Area (${netArea.toFixed(2)} sqm) × Thickness (${T.toFixed(3)}m) = ${masonryVol.toFixed(2)} cum [Bricks: ~${bricksCount} nos, Exc: ${excavationVol.toFixed(2)} cum, PCC: ${pccVol.toFixed(2)} cum, Plaster: ${plasterArea.toFixed(2)} sqm]`;
+
+  return {
+    quantity: masonryVol,
+    unit: "cum",
+    formula,
+    standard_reference: "IS 1200 Part III (Brickwork) & Part I (Earthwork)",
+    breakdown: {
+      net_area_sqm: netArea,
+      masonry_volume_cum: masonryVol,
+      bricks_count: bricksCount,
+      excavation_cum: excavationVol,
+      pcc_cum: pccVol,
+      plaster_sqm: plasterArea,
+    },
+  };
+}
+
+// 10c. Quick Building Estimation Engine (CPWD / PWD Building Indices)
+export function calculateQuickEstimate(
+  builtUpAreaSqft: number,
+  floors = 1,
+  qualityTier = "standard",
+  regionId = "national_cpwd"
+) {
+  if (builtUpAreaSqft <= 0) {
+    throw new Error("Built-up area must be strictly positive.");
+  }
+  const totalArea = builtUpAreaSqft * Math.max(1, floors);
+  const ratesMatrix: Record<string, Record<string, number>> = {
+    maharashtra_pwd: { economy: 1550, standard: 2100, luxury: 2950 },
+    karnataka_pwd: { economy: 1500, standard: 2050, luxury: 2900 },
+    national_cpwd: { economy: 1450, standard: 1950, luxury: 2800 },
+  };
+  const reg = ratesMatrix[regionId] || ratesMatrix["national_cpwd"];
+  const costPerSqft = reg[qualityTier] || reg["standard"];
+  const totalCost = Math.round(totalArea * costPerSqft);
+
+  // Materials
+  const cementBags = Math.round(totalArea * (qualityTier === "economy" ? 0.40 : qualityTier === "luxury" ? 0.52 : 0.45));
+  const steelKg = Math.round(totalArea * (qualityTier === "economy" ? 3.2 : qualityTier === "luxury" ? 4.8 : 3.8));
+  const sandCuft = Math.round(totalArea * (qualityTier === "economy" ? 1.5 : qualityTier === "luxury" ? 2.0 : 1.75));
+  const aggCuft = Math.round(totalArea * (qualityTier === "economy" ? 1.2 : qualityTier === "luxury" ? 1.6 : 1.4));
+  const bricksCount = Math.round(totalArea * (qualityTier === "economy" ? 16 : qualityTier === "luxury" ? 22 : 19));
+
+  return {
+    totalAreaSqft: totalArea,
+    costPerSqft,
+    totalCost,
+    cementBags,
+    steelTonnes: Math.round((steelKg / 1000) * 100) / 100,
+    steelKg,
+    sandBrass: Math.round((sandCuft / 100) * 100) / 100,
+    aggBrass: Math.round((aggCuft / 100) * 100) / 100,
+    bricksCount,
+  };
+}
+
 // 11. Exact Monetary Arithmetic & Totals (No Silent Tax Assumptions)
 export interface EstimateTotals {
   subtotal: number;
@@ -751,10 +842,166 @@ export function calculateEstimateTotals(
   };
 }
 
-export function formatIndianCurrency(amount: number): string {
+export function formatIndianCurrency(amount: number | string | null | undefined): string {
+  if (amount === null || amount === undefined || amount === "") return "₹0.00";
+  const cleaned = typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.-]/g, "")) : amount;
+  const num = typeof cleaned === "number" && !isNaN(cleaned) && isFinite(cleaned) ? cleaned : 0;
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 2,
-  }).format(amount);
+    minimumFractionDigits: 2,
+  }).format(num);
 }
+
+export const formatCurrencyINR = formatIndianCurrency;
+
+// 12. Measurement-Based Calculation Helpers
+export function calculateLength(length: number, unit: string = "m"): CalculationResult {
+  if (isNaN(length) || length <= 0) {
+    throw new Error("Length must be strictly positive.");
+  }
+  const u = unit.toLowerCase().trim();
+  const normUnit = u === "m" || u === "meter" || u === "metre" ? "m" : u === "ft" || u === "feet" ? "ft" : u;
+  return {
+    quantity: Number(length.toFixed(4)),
+    unit: normUnit,
+    formula: `Length = ${length.toFixed(2)} ${normUnit}`,
+    standard_reference: "Direct Linear Measurement",
+    breakdown: { length, unit: normUnit },
+  };
+}
+
+export function calculateArea(length: number, width: number, unit: string = "m"): CalculationResult {
+  if (isNaN(length) || length <= 0 || isNaN(width) || width <= 0) {
+    throw new Error("Length and width must be strictly positive.");
+  }
+  const u = unit.toLowerCase().trim();
+  const area = length * width;
+  const areaUnit = u === "m" || u === "meter" || u === "metre" || u === "sqm" ? "sqm" : "sqft";
+  const dimUnit = areaUnit === "sqm" ? "m" : "ft";
+  return {
+    quantity: Number(area.toFixed(4)),
+    unit: areaUnit,
+    formula: `Area = ${length.toFixed(2)}${dimUnit} × ${width.toFixed(2)}${dimUnit} = ${area.toFixed(2)} ${areaUnit}`,
+    standard_reference: "Direct Area Measurement (L × W)",
+    breakdown: { length, width, area: Number(area.toFixed(4)), unit: areaUnit },
+  };
+}
+
+export function calculateVolume(length: number, width: number, height: number, unit: string = "m"): CalculationResult {
+  if (isNaN(length) || length <= 0 || isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+    throw new Error("Length, width, and height must be strictly positive.");
+  }
+  const u = unit.toLowerCase().trim();
+  const vol = length * width * height;
+  const volUnit = u === "m" || u === "meter" || u === "metre" || u === "cum" ? "cum" : "cuft";
+  const dimUnit = volUnit === "cum" ? "m" : "ft";
+  return {
+    quantity: Number(vol.toFixed(4)),
+    unit: volUnit,
+    formula: `Volume = ${length.toFixed(2)}${dimUnit} × ${width.toFixed(2)}${dimUnit} × ${height.toFixed(2)}${dimUnit} = ${vol.toFixed(2)} ${volUnit}`,
+    standard_reference: "Direct Volume Measurement (L × W × H)",
+    breakdown: { length, width, height, volume: Number(vol.toFixed(4)), unit: volUnit },
+  };
+}
+
+export function calculateWallArea(
+  length: number,
+  height: number,
+  openings: OpeningDimension[] = [],
+  unit: string = "m"
+): CalculationResult {
+  if (isNaN(length) || length <= 0 || isNaN(height) || height <= 0) {
+    throw new Error("Wall length and height must be strictly positive.");
+  }
+  const u = unit.toLowerCase().trim();
+  const areaUnit = u === "m" || u === "meter" || u === "metre" || u === "sqm" ? "sqm" : "sqft";
+  const dimUnit = areaUnit === "sqm" ? "m" : "ft";
+
+  const grossArea = length * height;
+  let totalDeductions = 0;
+  const breakdownOpenings: string[] = [];
+
+  for (const op of openings) {
+    const opL = Number(op.width ?? op.length) || 0;
+    const opH = Number(op.height) || 0;
+    const count = Number(op.count) || 1;
+    if (opL <= 0 || opH <= 0 || count <= 0) continue;
+
+    const opArea = opL * opH * count;
+    totalDeductions += opArea;
+    const opName = op.name || op.description || "Opening";
+    breakdownOpenings.push(`${opName}: ${count}x (${opL.toFixed(2)}×${opH.toFixed(2)}${dimUnit} = ${opArea.toFixed(2)} ${areaUnit})`);
+  }
+
+  if (totalDeductions > grossArea) {
+    throw new Error("Total opening deductions cannot exceed wall gross area.");
+  }
+
+  const netArea = grossArea - totalDeductions;
+  return {
+    quantity: Number(netArea.toFixed(4)),
+    unit: areaUnit,
+    formula: `Gross Wall (${length.toFixed(2)}${dimUnit} × ${height.toFixed(2)}${dimUnit} = ${grossArea.toFixed(2)} ${areaUnit}) - Openings (${totalDeductions.toFixed(2)} ${areaUnit}) = ${netArea.toFixed(2)} ${areaUnit} net`,
+    standard_reference: "Net Wall Area = Gross Area - Openings Deductions",
+    breakdown: {
+      gross_area: Number(grossArea.toFixed(4)),
+      deductions: Number(totalDeductions.toFixed(4)),
+      net_area: Number(netArea.toFixed(4)),
+      openings_breakdown: breakdownOpenings,
+    },
+  };
+}
+
+export function calculateCount(count: number, unit: string = "nos"): CalculationResult {
+  if (isNaN(count) || count <= 0) {
+    throw new Error("Count must be strictly positive.");
+  }
+  return {
+    quantity: Number(count.toFixed(2)),
+    unit,
+    formula: `Count = ${count} ${unit}`,
+    standard_reference: "Unit / Piece Count",
+    breakdown: { count, unit },
+  };
+}
+
+export function calculateWeight(weight: number, unit: string = "kg"): CalculationResult {
+  if (isNaN(weight) || weight <= 0) {
+    throw new Error("Weight must be strictly positive.");
+  }
+  return {
+    quantity: Number(weight.toFixed(2)),
+    unit,
+    formula: `Weight = ${weight} ${unit}`,
+    standard_reference: "Weight Measurement",
+    breakdown: { weight, unit },
+  };
+}
+
+export function calculateTime(duration: number, unit: string = "day"): CalculationResult {
+  if (isNaN(duration) || duration <= 0) {
+    throw new Error("Duration must be strictly positive.");
+  }
+  return {
+    quantity: Number(duration.toFixed(2)),
+    unit,
+    formula: `Time = ${duration} ${unit}`,
+    standard_reference: "Time / Work Duration",
+    breakdown: { duration, unit },
+  };
+}
+
+export function calculateLumpSum(description?: string): CalculationResult {
+  const desc = description || "Lump sum specified work";
+  return {
+    quantity: 1,
+    unit: "ls",
+    formula: `Lump Sum: ${desc}`,
+    standard_reference: "Fixed Lump Sum (Scope Defined)",
+    breakdown: { description: desc },
+  };
+}
+
+

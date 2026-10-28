@@ -34,10 +34,44 @@ async def init_db() -> None:
     # Ensure all models are registered on Base.metadata before creating tables
     from app.models.models import (
         Profile, Organization, OrganizationMember, Client, Project,
-        Estimate, BOQItem, Quotation
+        Estimate, BOQItem, Quotation, RateItem, ActualExpense, Invoice, ConstructionDrawing, DrawingMeasurement
     )
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # SQLite column sync for dynamic additions
+    if "sqlite" in settings.DATABASE_URL:
+        async with engine.begin() as conn:
+            from sqlalchemy import text
+            def sync_sqlite_cols(connection):
+                rows = connection.execute(text("PRAGMA table_info(rate_items)")).fetchall()
+                existing_cols = {row[1] for row in rows}
+                cols_to_add = [
+                    ("description", "TEXT"),
+                    ("equipment_rate", "NUMERIC(14, 2) DEFAULT 0.00"),
+                    ("rate_source", "TEXT DEFAULT 'Manual'"),
+                    ("supplier_or_source_name", "TEXT"),
+                    ("location", "TEXT"),
+                    ("code", "TEXT"),
+                    ("rate_type", "TEXT DEFAULT 'raw_material'"),
+                    ("region", "TEXT DEFAULT 'national_cpwd'"),
+                    ("source_date", "TEXT"),
+                    ("rate_status", "TEXT DEFAULT 'verified_source'"),
+                    ("specification", "TEXT"),
+                    ("is_custom", "BOOLEAN DEFAULT 0"),
+                    ("is_archived", "BOOLEAN DEFAULT 0"),
+                    ("canonical_id", "TEXT"),
+                    ("default_item_id", "TEXT"),
+                ]
+                for col_name, col_def in cols_to_add:
+                    if col_name not in existing_cols:
+                        connection.execute(text(f"ALTER TABLE rate_items ADD COLUMN {col_name} {col_def}"))
+                boq_rows = connection.execute(text("PRAGMA table_info(boq_items)")).fetchall()
+                boq_cols = {row[1] for row in boq_rows}
+                if "rate_item_id" not in boq_cols:
+                    connection.execute(text("ALTER TABLE boq_items ADD COLUMN rate_item_id TEXT"))
+            await conn.run_sync(sync_sqlite_cols)
 
     # Seed default developer credentials if SQLite
     if "sqlite" in settings.DATABASE_URL:
@@ -135,4 +169,41 @@ async def init_db() -> None:
                 )
                 session.add(proj2)
 
+                await session.commit()
+
+        # Seed default rate library for demo organization if empty
+        async with AsyncSessionLocal() as session:
+            demo_org_id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+            rate_count_res = await session.execute(
+                select(RateItem).where(RateItem.organization_id == demo_org_id)
+            )
+            if not rate_count_res.scalars().first():
+                from app.core.default_rates import get_default_catalogue
+                default_items = get_default_catalogue(region="maharashtra_pwd")
+                for it in default_items:
+                    rate_obj = RateItem(
+                        organization_id=demo_org_id,
+                        code=it["code"],
+                        name=it["name"],
+                        category=it["category"],
+                        rate_type=it["rate_type"],
+                        unit=it["unit"],
+                        material_rate=it["material_rate"],
+                        labour_rate=it["labour_rate"],
+                        equipment_rate=it["equipment_rate"],
+                        combined_rate=it["combined_rate"],
+                        rate_source=it["rate_source"],
+                        supplier_or_source_name=it["supplier_or_source_name"],
+                        source_date=it["source_date"],
+                        rate_status=it["rate_status"],
+                        region=it["region"],
+                        specification=it["specification"],
+                        description=it["description"],
+                        location=it["location"],
+                        supplier_or_location=it["supplier_or_location"],
+                        notes=it["notes"],
+                        is_custom=False,
+                        default_item_id=it["code"],
+                    )
+                    session.add(rate_obj)
                 await session.commit()

@@ -144,3 +144,8 @@ export function useOrg() {
   }
   return context;
 }
+
+export function useSafeOrg() {
+  return useContext(OrgContext);
+}
+

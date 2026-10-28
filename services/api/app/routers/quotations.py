@@ -169,6 +169,7 @@ def build_live_payload_from_quotation(
 @router.get("", response_model=List[QuotationRead])
 async def list_quotations(
     organization_id: str,
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
     status: Optional[str] = Query(None, description="Filter by status (draft, issued, accepted, rejected, expired)"),
     search: Optional[str] = Query(None, description="Search by quotation number or client name"),
     skip: int = Query(0, ge=0),
@@ -189,6 +190,9 @@ async def list_quotations(
         .where(Quotation.organization_id == organization_id)
         .order_by(Quotation.updated_at.desc())
     )
+
+    if project_id and project_id.strip():
+        query = query.where(Quotation.project_id == project_id.strip())
 
     if status and status.strip():
         query = query.where(Quotation.status == status.strip().lower())
@@ -253,7 +257,7 @@ async def create_quotation(
     # Use financial rates from request or inherit from estimate
     oh_pct = req.overhead_pct if req.overhead_pct is not None else estimate.overhead_pct
     cont_pct = req.contingency_pct if req.contingency_pct is not None else estimate.contingency_pct
-    disc_pct = req.discount_pct if req.discount_pct is not None else estimate.discount_pct
+    disc_pct = Decimal("0.00")
     tax_configured = req.tax_configured if req.tax_configured is not None else False
     tax_rate = req.tax_rate if req.tax_rate is not None else Decimal("0.00")
     tax_name = req.tax_name or "GST"
@@ -292,8 +296,8 @@ async def create_quotation(
         overhead_amount=totals["overhead_amount"],
         contingency_pct=cont_pct,
         contingency_amount=totals["contingency_amount"],
-        discount_pct=disc_pct,
-        discount_amount=totals["discount_amount"],
+        discount_pct=Decimal("0.00"),
+        discount_amount=Decimal("0.00"),
         taxable_amount=totals["taxable_amount"],
         tax_amount=totals["gst_amount"] if tax_configured else Decimal("0.00"),
         total_amount=totals["grand_total"] if tax_configured else totals["taxable_amount"],

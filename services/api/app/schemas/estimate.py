@@ -17,6 +17,7 @@ class BOQItemBase(BaseModel):
     calculation_type: Optional[str] = None
     formula_type: Optional[str] = None
     calculation_details: Optional[Dict[str, Any]] = None
+    rate_item_id: Optional[str] = None
     notes: Optional[str] = None
     sort_order: int = 0
 
@@ -51,6 +52,7 @@ class BOQItemUpdate(BaseModel):
     is_manual: Optional[bool] = None
     calculation_type: Optional[str] = None
     calculation_details: Optional[Dict[str, Any]] = None
+    rate_item_id: Optional[str] = None
     notes: Optional[str] = None
     sort_order: Optional[int] = None
 

@@ -36,20 +36,20 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "md" }: Mod
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-anumaan-charcoal-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#102F57]/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className={`w-full ${widthClasses} bg-white rounded-xl shadow-xl border border-anumaan-border overflow-hidden animate-in zoom-in-95 duration-150`}
+        className={`w-full ${widthClasses} bg-white rounded-xl shadow-xl border border-[#DCE4EE] overflow-hidden animate-in zoom-in-95 duration-150`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-anumaan-border-light bg-anumaan-beige-50/40">
-          <h3 className="text-base font-semibold text-anumaan-charcoal-900 font-devanagari">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#DCE4EE] bg-[#F3F6FA]/70">
+          <h3 className="text-base font-bold text-[#102F57] font-devanagari">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-anumaan-charcoal-400 hover:text-anumaan-charcoal-700 hover:bg-anumaan-beige-100 transition-colors"
+            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#102F57] hover:bg-[#EEF3F9] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

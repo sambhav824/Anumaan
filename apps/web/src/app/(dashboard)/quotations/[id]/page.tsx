@@ -290,8 +290,8 @@ export default function QuotationDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto py-12 text-center text-stone-500">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-stone-300 border-t-amber-600 mb-3"></div>
+      <div className="max-w-6xl mx-auto py-12 text-center text-[#64748B]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#DCE4EE] border-t-[#102F57] mb-3"></div>
         <p>{t("common.loading") || "Loading quotation..."}</p>
       </div>
     );
@@ -319,58 +319,73 @@ export default function QuotationDetailPage() {
   if (!quotation) return null;
 
   // Derive document display values from snapshot if issued, or live fields if draft
-  const isSnapshot = quotation.status !== "draft" && quotation.snapshot;
-  const company = isSnapshot ? quotation.snapshot?.company : currentOrg;
-  const clientName = isSnapshot ? quotation.snapshot?.client?.name : quotation.client_name;
+  // Derive document display values from snapshot if issued, or live fields if draft
+  const isSnapshot = quotation.status !== "draft" && Boolean(quotation.snapshot);
+  const company = isSnapshot ? (quotation.snapshot?.company || currentOrg) : currentOrg;
+  const clientName = isSnapshot ? (quotation.snapshot?.client?.name || quotation.client_name) : quotation.client_name;
   const clientPhone = isSnapshot ? quotation.snapshot?.client?.phone : null;
   const clientEmail = isSnapshot ? quotation.snapshot?.client?.email : null;
   const clientAddress = isSnapshot ? quotation.snapshot?.client?.address : null;
 
-  const projectName = isSnapshot ? quotation.snapshot?.project?.name : quotation.project_name;
+  const projectName = isSnapshot ? (quotation.snapshot?.project?.name || quotation.project_name) : quotation.project_name;
   const projectAddress = isSnapshot ? quotation.snapshot?.project?.address : null;
   const projectType = isSnapshot ? quotation.snapshot?.project?.project_type : null;
 
-  const boqItems: any[] = isSnapshot
-    ? quotation.snapshot?.boq_items || []
-    : quotation.items || [];
+  const snapFinancials = isSnapshot ? quotation.snapshot?.financials : null;
 
-  const subtotal = Number(quotation.subtotal || 0);
-  const overhead = Number(quotation.overhead_amount || 0);
-  const contingency = Number(quotation.contingency_amount || 0);
-  const discount = Number(quotation.discount_amount || 0);
-  const taxableAmount = Number(quotation.taxable_amount || 0);
-  const taxConfigured = Boolean(quotation.tax_configured);
-  const taxRate = Number(quotation.tax_rate || 0);
-  const taxAmount = Number(quotation.tax_amount || 0);
-  const grandTotal = Number(quotation.grand_total || 0);
+  // Support both snapshot items and live items keys
+  const boqItems: any[] = isSnapshot
+    ? (quotation.snapshot?.items || quotation.snapshot?.boq_items || quotation.items || [])
+    : (quotation.items || quotation.snapshot?.items || []);
+
+  const subtotal = Number(snapFinancials?.subtotal ?? quotation.subtotal ?? 0) || 0;
+  const overhead = Number(snapFinancials?.overhead_amount ?? quotation.overhead_amount ?? 0) || 0;
+  const contingency = Number(snapFinancials?.contingency_amount ?? quotation.contingency_amount ?? 0) || 0;
+  const discount = Number(snapFinancials?.discount_amount ?? quotation.discount_amount ?? 0) || 0;
+  const taxableAmount = Number(snapFinancials?.taxable_amount ?? quotation.taxable_amount ?? 0) || (subtotal + overhead + contingency - discount);
+  const taxConfigured = Boolean(snapFinancials ? snapFinancials.tax_configured : quotation.tax_configured);
+  const taxRate = Number(snapFinancials?.tax_rate ?? quotation.tax_rate ?? 0) || 0;
+  const taxAmount = Number(snapFinancials?.tax_amount ?? quotation.tax_amount ?? 0) || (taxConfigured ? Math.round(taxableAmount * (taxRate / 100) * 100) / 100 : 0);
+
+  // Grand Total: statutory sum of taxable amount plus configured tax
+  const computedGrandTotal = Math.round((taxableAmount + (taxConfigured ? taxAmount : 0)) * 100) / 100;
+  let grandTotal = computedGrandTotal;
+  if (isSnapshot && snapFinancials?.total_amount && Number(snapFinancials.total_amount) > 0) {
+    grandTotal = Number(snapFinancials.total_amount);
+  } else if (!taxConfigured && quotation.total_amount && Number(quotation.total_amount) > 0) {
+    grandTotal = Number(quotation.total_amount);
+  }
+  if (!grandTotal || isNaN(grandTotal)) {
+    grandTotal = computedGrandTotal;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-16">
       {/* Top Action Bar */}
-      <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white border border-[#DCE4EE] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center space-x-3 w-full md:w-auto">
           <Link
             href="/quotations"
-            className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition"
+            className="p-2 text-[#102F57] hover:text-[#0B213E] hover:bg-[#F3F6FA] rounded-lg transition border border-[#DCE4EE]"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold text-stone-900">
+              <h1 className="text-xl font-bold text-[#102F57] font-heading">
                 {quotation.quotation_number}
               </h1>
               {getStatusBadge(quotation.status)}
             </div>
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-[#64748B]">
               {t("quotations.refEstimate")}:{" "}
               <Link
                 href={`/estimates/${quotation.estimate_id}`}
-                className="text-amber-700 hover:underline font-medium"
+                className="text-[#102F57] hover:underline font-semibold"
               >
                 {quotation.estimate_number || quotation.estimate_id.slice(0, 8)}
               </Link>{" "}
-              • Lang: <span className="uppercase font-semibold">{quotation.language}</span>
+              • Lang: <span className="uppercase font-semibold text-[#102F57]">{quotation.language}</span>
             </p>
           </div>
         </div>
@@ -381,15 +396,15 @@ export default function QuotationDetailPage() {
             <>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-3.5 py-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-lg text-sm font-medium transition flex items-center space-x-1.5"
+                className="btn-secondary px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center space-x-1.5"
               >
-                <Edit3 className="w-4 h-4 text-stone-600" />
+                <Edit3 className="w-4 h-4 text-[#102F57]" />
                 <span>{isEditing ? t("quotations.closeEditor") : t("quotations.editDraft")}</span>
               </button>
 
               <button
                 onClick={() => setShowIssueModal(true)}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium shadow-sm transition flex items-center space-x-1.5"
+                className="btn-accent px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-1.5"
               >
                 <Lock className="w-4 h-4" />
                 <span>{t("quotations.issue_quotation")}</span>
@@ -400,7 +415,7 @@ export default function QuotationDetailPage() {
               <button
                 onClick={handleDownloadPdf}
                 disabled={downloadingPdf}
-                className="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium shadow-sm transition flex items-center space-x-1.5"
+                className="btn-primary px-3.5 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center space-x-1.5"
               >
                 {downloadingPdf ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -413,12 +428,12 @@ export default function QuotationDetailPage() {
               <button
                 onClick={handleExportExcel}
                 disabled={exportingExcel}
-                className="px-3.5 py-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 rounded-lg text-sm font-medium transition flex items-center space-x-1.5"
+                className="btn-secondary px-3.5 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center space-x-1.5"
               >
                 {exportingExcel ? (
-                  <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-[#102F57] border-t-transparent rounded-full animate-spin"></div>
                 ) : (
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <FileSpreadsheet className="w-4 h-4 text-[#16835D]" />
                 )}
                 <span>Excel BOQ</span>
               </button>
@@ -426,9 +441,9 @@ export default function QuotationDetailPage() {
               {quotation.status === "issued" && (
                 <button
                   onClick={() => setShowStatusModal(true)}
-                  className="px-3.5 py-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-lg text-sm font-medium transition flex items-center space-x-1.5"
+                  className="btn-secondary px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center space-x-1.5"
                 >
-                  <Clock className="w-4 h-4 text-stone-500" />
+                  <Clock className="w-4 h-4 text-[#64748B]" />
                   <span>{t("quotations.updateStatus")}</span>
                 </button>
               )}
@@ -439,10 +454,10 @@ export default function QuotationDetailPage() {
             onClick={handleDuplicate}
             disabled={duplicating}
             title="Duplicate as new draft quotation"
-            className="p-2 border border-stone-300 text-stone-600 hover:bg-stone-50 rounded-lg transition"
+            className="btn-secondary p-2 rounded-lg"
           >
             {duplicating ? (
-              <div className="w-4 h-4 border-2 border-stone-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-4 h-4 border-2 border-[#102F57] border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <Copy className="w-4 h-4" />
             )}
@@ -548,13 +563,13 @@ export default function QuotationDetailPage() {
           </div>
 
           {/* Tax config */}
-          <div className="pt-2 border-t border-amber-200/60">
-            <label className="flex items-center space-x-2 text-sm font-medium text-stone-800 cursor-pointer">
+          <div className="pt-2 border-t border-[#DCE4EE]">
+            <label className="flex items-center space-x-2 text-sm font-medium text-[#263445] cursor-pointer">
               <input
                 type="checkbox"
                 checked={editForm.tax_configured}
                 onChange={(e) => setEditForm({ ...editForm, tax_configured: e.target.checked })}
-                className="w-4 h-4 text-amber-600 rounded border-stone-300"
+                className="w-4 h-4 accent-[#F7931E] rounded border-[#DCE4EE]"
               />
               <span>{t("quotations.taxConfigTitle")}</span>
             </label>
@@ -636,20 +651,20 @@ export default function QuotationDetailPage() {
       )}
 
       {/* AUTHORITATIVE DOCUMENT VIEW (A4 Paper Aesthetic) */}
-      <div className="bg-white border border-stone-300 rounded-2xl shadow-xl overflow-hidden p-8 md:p-12 space-y-8 font-sans text-stone-800">
+      <div className="bg-white border border-[#DCE4EE] rounded-2xl shadow-xl overflow-hidden p-8 md:p-12 space-y-8 font-sans text-[#263445]">
         {/* Document Header */}
-        <div className="border-b-2 border-amber-700/80 pb-6 flex flex-col md:flex-row justify-between items-start gap-6">
+        <div className="border-b-2 border-[#102F57] pb-6 flex flex-col md:flex-row justify-between items-start gap-6">
           <div className="space-y-1.5">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold tracking-tight text-stone-900">{t("brand.nameDevanagari")}</span>
-              <span className="text-sm font-medium text-amber-700 px-2 py-0.5 rounded bg-amber-50 border border-amber-200">
+              <span className="text-2xl font-bold tracking-tight text-[#102F57] font-heading">{t("brand.nameDevanagari")}</span>
+              <span className="text-sm font-semibold text-[#102F57] px-2 py-0.5 rounded bg-[#EEF3F9] border border-[#DCE4EE]">
                 {t("brand.name")}
               </span>
             </div>
-            <p className="text-xs italic text-stone-500">“{t("brand.tagline")}”</p>
+            <p className="text-xs italic text-[#64748B]">“{t("brand.tagline")}”</p>
 
-            <div className="pt-2 text-xs text-stone-600 space-y-0.5">
-              <p className="font-semibold text-stone-900 text-sm">{company?.name || "Contractor"}</p>
+            <div className="pt-2 text-xs text-[#64748B] space-y-0.5">
+              <p className="font-semibold text-[#102F57] text-sm">{company?.name || "Contractor"}</p>
               {company?.address && <p>{company.address}</p>}
               {(company?.city || company?.state) && (
                 <p>
@@ -659,34 +674,34 @@ export default function QuotationDetailPage() {
               {company?.phone && <p>Ph: {company.phone}</p>}
               {company?.email && <p>Email: {company.email}</p>}
               {company?.gstin && (
-                <p className="font-mono text-stone-700 font-medium">GSTIN: {company.gstin}</p>
+                <p className="font-mono text-[#263445] font-medium">GSTIN: {company.gstin}</p>
               )}
             </div>
           </div>
 
           <div className="md:text-right space-y-2">
-            <span className="inline-block text-xs uppercase tracking-widest font-bold text-amber-800 bg-amber-100/60 px-3 py-1 rounded">
+            <span className="inline-block text-xs uppercase tracking-widest font-bold text-[#102F57] bg-[#EEF3F9] border border-[#DCE4EE] px-3 py-1 rounded">
               {t("quotations.commercialQuotation")}
             </span>
-            <div className="text-lg font-bold font-mono text-stone-900">
+            <div className="text-lg font-bold font-mono text-[#102F57]">
               {quotation.quotation_number}
             </div>
-            <div className="text-xs space-y-1 text-stone-600">
+            <div className="text-xs space-y-1 text-[#64748B]">
               <p>
-                <span className="text-stone-400">{t("common.date")}:</span>{" "}
-                <span className="font-medium text-stone-800">
+                <span className="text-[#64748B]">{t("common.date")}:</span>{" "}
+                <span className="font-medium text-[#263445]">
                   {quotation.issue_date || new Date().toISOString().split("T")[0]}
                 </span>
               </p>
               <p>
-                <span className="text-stone-400">{t("quotations.validUntil")}:</span>{" "}
-                <span className="font-medium text-stone-800">
+                <span className="text-[#64748B]">{t("quotations.validUntil")}:</span>{" "}
+                <span className="font-medium text-[#263445]">
                   {quotation.valid_until_date || "30 days from date of issue"}
                 </span>
               </p>
               <p>
-                <span className="text-stone-400">{t("common.status")}:</span>{" "}
-                <span className="font-semibold uppercase text-stone-800">
+                <span className="text-[#64748B]">{t("common.status")}:</span>{" "}
+                <span className="font-semibold uppercase text-[#102F57]">
                   {t(`quotations.status_${quotation.status}`) || quotation.status}
                 </span>
               </p>
@@ -695,44 +710,44 @@ export default function QuotationDetailPage() {
         </div>
 
         {/* Client & Project Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-stone-50/70 border border-stone-200/80 rounded-xl p-5 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#F3F6FA] border border-[#DCE4EE] rounded-xl p-5 text-xs">
           <div className="space-y-1">
-            <span className="font-bold text-stone-900 uppercase tracking-wider text-[11px] block text-amber-800 mb-1">
+            <span className="font-bold text-[#102F57] uppercase tracking-wider text-[11px] block mb-1">
               {t("quotations.clientDetails")}
             </span>
-            <p className="font-semibold text-stone-800 text-sm">{clientName || "—"}</p>
-            {clientPhone && <p className="text-stone-600">{t("clients.phoneLabel")}: {clientPhone}</p>}
-            {clientEmail && <p className="text-stone-600">{t("clients.emailLabel")}: {clientEmail}</p>}
-            {clientAddress && <p className="text-stone-600">{clientAddress}</p>}
+            <p className="font-semibold text-[#263445] text-sm">{clientName || "—"}</p>
+            {clientPhone && <p className="text-[#64748B]">{t("clients.phoneLabel")}: {clientPhone}</p>}
+            {clientEmail && <p className="text-[#64748B]">{t("clients.emailLabel")}: {clientEmail}</p>}
+            {clientAddress && <p className="text-[#64748B]">{clientAddress}</p>}
           </div>
 
           <div className="space-y-1">
-            <span className="font-bold text-stone-900 uppercase tracking-wider text-[11px] block text-amber-800 mb-1">
+            <span className="font-bold text-[#102F57] uppercase tracking-wider text-[11px] block mb-1">
               {t("quotations.projectDetails")}
             </span>
-            <p className="font-semibold text-stone-800 text-sm">{projectName || "—"}</p>
-            {projectType && <p className="text-stone-600 capitalize">{t("common.type")}: {t(`projectType.${projectType}`) || projectType}</p>}
-            {projectAddress && <p className="text-stone-600">{t("projects.locationLabel")}: {projectAddress}</p>}
-            <p className="text-stone-500 pt-1">
-              {t("quotations.refEstimate")}: <span className="font-mono text-stone-800">{quotation.estimate_number || "—"}</span>
+            <p className="font-semibold text-[#263445] text-sm">{projectName || "—"}</p>
+            {projectType && <p className="text-[#64748B] capitalize">{t("common.type")}: {t(`projectType.${projectType}`) || projectType}</p>}
+            {projectAddress && <p className="text-[#64748B]">{t("projects.locationLabel")}: {projectAddress}</p>}
+            <p className="text-[#64748B] pt-1">
+              {t("quotations.refEstimate")}: <span className="font-mono text-[#102F57] font-semibold">{quotation.estimate_number || "—"}</span>
             </p>
           </div>
         </div>
 
         {/* Itemized BOQ Table */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+          <div className="flex items-center justify-between border-b border-[#DCE4EE] pb-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[#102F57]">
               {t("quotations.itemizedBOQ")}
             </h3>
-            <span className="text-xs text-stone-500 font-mono">
+            <span className="text-xs text-[#64748B] font-mono">
               {boqItems.length} {t("estimates.items_count")}
             </span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-stone-200">
-              <thead className="bg-stone-100 text-stone-700 uppercase font-semibold border-b border-stone-200">
+            <table className="w-full text-left text-xs border border-[#DCE4EE]">
+              <thead className="bg-[#E8EEF5] text-[#102F57] uppercase font-semibold border-b border-[#DCE4EE]">
                 <tr>
                   <th className="px-3 py-2.5 w-12 text-center">{t("estimates.item_number")}</th>
                   <th className="px-3 py-2.5">{t("estimates.description")}</th>
@@ -742,46 +757,66 @@ export default function QuotationDetailPage() {
                   <th className="px-3 py-2.5 w-32 text-right">{t("estimates.amount")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-200 text-stone-800">
+              <tbody className="divide-y divide-[#DCE4EE] text-[#263445]">
                 {boqItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-stone-400 italic">
+                    <td colSpan={6} className="px-4 py-8 text-center text-[#64748B] italic">
                       {t("estimates.empty_boq_notice")}
                     </td>
                   </tr>
                 ) : (
-                  boqItems.map((item, idx) => (
-                    <tr key={item.id || idx} className="hover:bg-amber-50/20">
-                      <td className="px-3 py-2.5 text-center font-mono text-stone-500">
-                        {item.item_number || idx + 1}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <div className="font-medium text-stone-900">{item.description}</div>
-                        {item.specification && (
-                          <div className="text-[11px] text-stone-500 mt-0.5">
-                            {item.specification}
-                          </div>
-                        )}
-                        {item.formula && (
-                          <div className="text-[10px] font-mono text-stone-400 mt-0.5">
-                            {t("estimates.formula_breakdown_heading")}: {item.formula}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-medium">
-                        {Number(item.quantity).toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2.5 text-center text-stone-600 font-medium">
-                        {item.unit}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono">
-                        {formatIndianCurrency(Number(item.unit_rate))}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-semibold text-stone-900">
-                        {formatIndianCurrency(Number(item.total_amount))}
-                      </td>
-                    </tr>
-                  ))
+                  boqItems.map((item, idx) => {
+                    const rawQty = item.quantity;
+                    const qtyNum = typeof rawQty === "number" ? rawQty : parseFloat(String(rawQty).replace(/[^0-9.-]/g, "")) || 0;
+                    
+                    const rawRate = item.unit_rate;
+                    const rateNum = typeof rawRate === "number" ? rawRate : parseFloat(String(rawRate).replace(/[^0-9.-]/g, "")) || 0;
+
+                    let lineAmount = 0;
+                    const rawAmt = item.amount ?? item.total_amount ?? item.line_amount;
+                    if (rawAmt !== undefined && rawAmt !== null && rawAmt !== "") {
+                      const parsed = typeof rawAmt === "number" ? rawAmt : parseFloat(String(rawAmt).replace(/[^0-9.-]/g, ""));
+                      if (!isNaN(parsed) && parsed > 0) {
+                        lineAmount = parsed;
+                      }
+                    }
+                    if (!lineAmount || isNaN(lineAmount)) {
+                      lineAmount = Math.round(qtyNum * rateNum * 100) / 100;
+                    }
+
+                    return (
+                      <tr key={item.id || idx} className="hover:bg-[#F3F6FA]">
+                        <td className="px-3 py-2.5 text-center font-mono text-[#102F57]">
+                          {item.item_number || `${idx + 1}.1`}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="font-semibold text-[#102F57]">{item.description}</div>
+                          {item.specification && (
+                            <div className="text-[11px] text-[#64748B] mt-0.5">
+                              {item.specification}
+                            </div>
+                          )}
+                          {item.formula && (
+                            <div className="text-[10px] font-mono text-[#64748B] mt-0.5">
+                              {t("estimates.formula_breakdown_heading")}: {item.formula}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-medium">
+                          {qtyNum.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-[#64748B] font-medium">
+                          {item.unit}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono">
+                          {formatIndianCurrency(rateNum)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold text-[#102F57]">
+                          {formatIndianCurrency(lineAmount)}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -791,65 +826,57 @@ export default function QuotationDetailPage() {
         {/* Financial Summary & Transparent Tax Breakdown */}
         <div className="flex flex-col md:flex-row justify-between items-start gap-6 pt-2">
           {/* Transparent Tax Policy Badge */}
-          <div className="max-w-md text-xs space-y-2 text-stone-600">
-            <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-lg">
-              <div className="flex items-center space-x-1.5 font-semibold text-amber-900 mb-1">
-                <ShieldCheck className="w-4 h-4 text-amber-700" />
+          <div className="max-w-md text-xs space-y-2 text-[#64748B]">
+            <div className="p-3 bg-[#EEF3F9] border border-[#DCE4EE] rounded-lg">
+              <div className="flex items-center space-x-1.5 font-semibold text-[#102F57] mb-1">
+                <ShieldCheck className="w-4 h-4 text-[#102F57]" />
                 <span>{t("quotations.taxTransparencyHeading")}</span>
               </div>
-              <p className="text-[11px] leading-relaxed">
+              <p className="text-[11px] leading-relaxed text-[#263445]">
                 {taxConfigured
                   ? t("quotations.taxConfiguredExplanation", { rate: taxRate, name: quotation.tax_name || "GST" })
                   : t("quotations.taxNotConfiguredExplanation")}
               </p>
             </div>
             {quotation.client_instructions && (
-              <div className="p-2.5 bg-stone-50 rounded border border-stone-200 text-[11px]">
-                <span className="font-semibold text-stone-700 block">{t("quotations.clientInstructionsLabel")}</span>
-                <span className="italic">{quotation.client_instructions}</span>
+              <div className="p-2.5 bg-[#F3F6FA] rounded border border-[#DCE4EE] text-[11px]">
+                <span className="font-semibold text-[#102F57] block">{t("quotations.clientInstructionsLabel")}</span>
+                <span className="italic text-[#263445]">{quotation.client_instructions}</span>
               </div>
             )}
           </div>
 
           {/* Totals Table */}
-          <div className="w-full md:w-80 space-y-2 text-xs border border-stone-200 rounded-xl p-4 bg-stone-50/50">
-            <div className="flex justify-between text-stone-600">
+          <div className="w-full md:w-80 space-y-2 text-xs border border-[#DCE4EE] rounded-xl p-4 bg-[#F3F6FA]">
+            <div className="flex justify-between text-[#64748B]">
               <span>{t("quotations.boqSubtotal")}</span>
-              <span className="font-mono font-medium">{formatIndianCurrency(subtotal)}</span>
+              <span className="font-mono font-medium text-[#263445]">{formatIndianCurrency(subtotal)}</span>
             </div>
             {overhead > 0 && (
-              <div className="flex justify-between text-stone-600">
+              <div className="flex justify-between text-[#64748B]">
                 <span>{t("quotations.overhead")}:</span>
-                <span className="font-mono font-medium">{formatIndianCurrency(overhead)}</span>
+                <span className="font-mono font-medium text-[#263445]">{formatIndianCurrency(overhead)}</span>
               </div>
             )}
             {contingency > 0 && (
-              <div className="flex justify-between text-stone-600">
+              <div className="flex justify-between text-[#64748B]">
                 <span>{t("quotations.contingency")}:</span>
-                <span className="font-mono font-medium">{formatIndianCurrency(contingency)}</span>
+                <span className="font-mono font-medium text-[#263445]">{formatIndianCurrency(contingency)}</span>
               </div>
             )}
-            {discount > 0 && (
-              <div className="flex justify-between text-stone-600">
-                <span>{t("quotations.discount")}:</span>
-                <span className="font-mono font-medium text-emerald-700">
-                  - {formatIndianCurrency(discount)}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between text-stone-800 font-semibold border-t border-stone-200 pt-1.5">
+            <div className="flex justify-between text-[#102F57] font-semibold border-t border-[#DCE4EE] pt-1.5">
               <span>{t("quotations.taxableAmount")}:</span>
               <span className="font-mono">{formatIndianCurrency(taxableAmount)}</span>
             </div>
 
             {/* Transparent Tax Row */}
-            <div className="flex justify-between items-center py-1 border-t border-dashed border-stone-300">
-              <span className="text-stone-600">
+            <div className="flex justify-between items-center py-1 border-t border-dashed border-[#DCE4EE]">
+              <span className="text-[#64748B]">
                 {taxConfigured ? `${quotation.tax_name || "GST"} (${taxRate}%):` : t("quotations.taxStatus")}
               </span>
               <span
                 className={`font-mono ${
-                  taxConfigured ? "font-medium text-stone-900" : "text-amber-800 italic font-semibold"
+                  taxConfigured ? "font-bold text-[#102F57]" : "text-[#B86B08] italic font-semibold"
                 }`}
               >
                 {taxConfigured ? formatIndianCurrency(taxAmount) : t("quotations.taxNotConfiguredZero")}
@@ -857,22 +884,22 @@ export default function QuotationDetailPage() {
             </div>
 
             {/* Grand Total */}
-            <div className="flex justify-between text-stone-900 font-bold text-sm border-t-2 border-stone-800 pt-2 text-amber-800">
+            <div className="flex justify-between text-[#102F57] font-bold text-sm border-t-2 border-[#102F57] pt-2">
               <span>{t("quotations.grandTotal")}:</span>
-              <span className="font-mono text-base">{formatIndianCurrency(grandTotal)}</span>
+              <span className="font-mono text-base text-[#102F57]">{formatIndianCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
 
         {/* Terms, Scope & Signatures */}
-        <div className="space-y-6 pt-4 border-t border-stone-200">
+        <div className="space-y-6 pt-4 border-t border-[#DCE4EE]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
             {quotation.payment_terms && (
               <div className="space-y-1.5">
-                <span className="font-bold uppercase tracking-wider text-stone-900 block text-amber-800">
+                <span className="font-bold uppercase tracking-wider text-[#102F57] block">
                   {t("quotations.paymentTerms")}
                 </span>
-                <div className="text-stone-600 whitespace-pre-line leading-relaxed bg-stone-50 p-3 rounded-lg border border-stone-200/70">
+                <div className="text-[#263445] whitespace-pre-line leading-relaxed bg-[#F3F6FA] p-3 rounded-lg border border-[#DCE4EE]">
                   {quotation.payment_terms}
                 </div>
               </div>
@@ -880,10 +907,10 @@ export default function QuotationDetailPage() {
 
             {quotation.exclusions && (
               <div className="space-y-1.5">
-                <span className="font-bold uppercase tracking-wider text-stone-900 block text-amber-800">
+                <span className="font-bold uppercase tracking-wider text-[#102F57] block">
                   {t("quotations.exclusions")}
                 </span>
-                <div className="text-stone-600 whitespace-pre-line leading-relaxed bg-stone-50 p-3 rounded-lg border border-stone-200/70">
+                <div className="text-[#263445] whitespace-pre-line leading-relaxed bg-[#F3F6FA] p-3 rounded-lg border border-[#DCE4EE]">
                   {quotation.exclusions}
                 </div>
               </div>
@@ -891,10 +918,10 @@ export default function QuotationDetailPage() {
 
             {quotation.notes && (
               <div className="space-y-1.5">
-                <span className="font-bold uppercase tracking-wider text-stone-900 block text-amber-800">
+                <span className="font-bold uppercase tracking-wider text-[#102F57] block">
                   {t("quotations.notes")}
                 </span>
-                <div className="text-stone-600 whitespace-pre-line leading-relaxed bg-stone-50 p-3 rounded-lg border border-stone-200/70">
+                <div className="text-[#263445] whitespace-pre-line leading-relaxed bg-[#F3F6FA] p-3 rounded-lg border border-[#DCE4EE]">
                   {quotation.notes}
                 </div>
               </div>
@@ -902,37 +929,37 @@ export default function QuotationDetailPage() {
           </div>
 
           {/* Signature and Stamp Blocks */}
-          <div className="pt-8 flex flex-col md:flex-row justify-between items-end gap-8 text-xs text-stone-600">
+          <div className="pt-8 flex flex-col md:flex-row justify-between items-end gap-8 text-xs text-[#64748B]">
             {/* Acceptance Signature */}
-            <div className="w-full md:w-64 border-t border-stone-400 pt-2 space-y-1">
-              <p className="font-semibold text-stone-800">{t("quotations.clientAcceptanceSign")}</p>
-              <p className="text-stone-400">{t("quotations.nameAndDesignation")}</p>
-              <p className="text-stone-400">{t("common.date")}:</p>
+            <div className="w-full md:w-64 border-t border-[#DCE4EE] pt-2 space-y-1">
+              <p className="font-semibold text-[#102F57]">{t("quotations.clientAcceptanceSign")}</p>
+              <p className="text-[#64748B]">{t("quotations.nameAndDesignation")}</p>
+              <p className="text-[#64748B]">{t("common.date")}:</p>
             </div>
 
             {/* Contractor Signatory & Stamp */}
-            <div className="w-full md:w-72 border-t border-stone-800 pt-2 text-right space-y-1">
-              <p className="font-semibold text-stone-900">
+            <div className="w-full md:w-72 border-t border-[#102F57] pt-2 text-right space-y-1">
+              <p className="font-semibold text-[#102F57]">
                 {t("quotations.forCompany", { company: company?.name || "Contractor" })}
               </p>
               {quotation.authorized_signatory_name && (
-                <p className="font-medium text-stone-800">
+                <p className="font-medium text-[#263445]">
                   {quotation.authorized_signatory_name}
                 </p>
               )}
               {quotation.authorized_signatory_designation && (
-                <p className="text-stone-500">
+                <p className="text-[#64748B]">
                   {quotation.authorized_signatory_designation}
                 </p>
               )}
-              <div className="pt-4 inline-block w-28 h-16 border border-dashed border-stone-300 rounded text-center text-[10px] text-stone-400 leading-[4rem]">
+              <div className="pt-4 inline-block w-28 h-16 border border-dashed border-[#DCE4EE] rounded text-center text-[10px] text-[#64748B] leading-[4rem]">
                 {t("quotations.companySeal")}
               </div>
             </div>
           </div>
 
           {/* Footer note */}
-          <div className="text-center text-[10px] text-stone-400 pt-6 border-t border-stone-100">
+          <div className="text-center text-[10px] text-[#64748B] pt-6 border-t border-[#DCE4EE]">
             {t("quotations.generatedWithAnumaan", { brand: t("brand.name"), ref: quotation.quotation_number })}
           </div>
         </div>
@@ -944,20 +971,21 @@ export default function QuotationDetailPage() {
         onClose={() => !issuing && setShowIssueModal(false)}
         title={t("quotations.finalizeAndIssue")}
       >
-        <div className="space-y-4 text-sm text-stone-700">
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-            <div className="flex items-center space-x-2 font-semibold text-amber-900">
-              <Lock className="w-4 h-4 text-amber-700 flex-shrink-0" />
+        <div className="space-y-4 text-sm text-[#263445]">
+          {/* Notice Banner */}
+          <div className="p-4 bg-[#FFF6EB] border border-[#F7931E]/30 rounded-xl space-y-2">
+            <div className="flex items-center space-x-2 font-semibold text-[#102F57]">
+              <Lock className="w-4 h-4 text-[#F7931E] flex-shrink-0" />
               <span>{t("quotations.immutableSnapshotNotice")}</span>
             </div>
-            <p className="text-xs text-stone-700 leading-relaxed">
+            <p className="text-xs text-[#64748B] leading-relaxed">
               {t("quotations.immutableSnapshotDesc")}
             </p>
           </div>
 
           {/* Tax Confirmation in Modal */}
-          <div className="border border-stone-200 rounded-xl p-4 space-y-3 bg-stone-50">
-            <h4 className="font-semibold text-stone-900 text-xs uppercase tracking-wider">
+          <div className="border border-[#DCE4EE] rounded-xl p-4 space-y-3 bg-[#F3F6FA]">
+            <h4 className="font-semibold text-[#102F57] text-xs uppercase tracking-wider font-heading">
               {t("quotations.statutoryTaxConfirmation")}
             </h4>
 
@@ -966,26 +994,26 @@ export default function QuotationDetailPage() {
                 type="checkbox"
                 checked={issueTaxConfigured}
                 onChange={(e) => setIssueTaxConfigured(e.target.checked)}
-                className="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500"
+                className="w-4 h-4 accent-[#F7931E] rounded border-[#DCE4EE] focus:ring-[#F7931E]"
               />
-              <span className="font-medium text-stone-800">{t("quotations.applyTaxCheckbox")}</span>
+              <span className="font-medium text-[#263445]">{t("quotations.applyTaxCheckbox")}</span>
             </label>
 
             {issueTaxConfigured ? (
               <div className="grid grid-cols-2 gap-3 pl-6">
                 <div>
-                  <label className="block text-[11px] font-medium text-stone-600 mb-0.5">
+                  <label className="block text-[11px] font-medium text-[#64748B] mb-0.5">
                     {t("quotations.taxName")}
                   </label>
                   <input
                     type="text"
                     value={issueTaxName}
                     onChange={(e) => setIssueTaxName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded text-xs"
+                    className="w-full px-2.5 py-1.5 bg-white border border-[#DCE4EE] rounded text-xs text-[#263445] focus:outline-none focus:ring-2 focus:ring-[#102F57]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-stone-600 mb-0.5">
+                  <label className="block text-[11px] font-medium text-[#64748B] mb-0.5">
                     {t("quotations.taxRate")}
                   </label>
                   <input
@@ -993,24 +1021,24 @@ export default function QuotationDetailPage() {
                     step="0.01"
                     value={issueTaxRate}
                     onChange={(e) => setIssueTaxRate(parseFloat(e.target.value) || 0)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded text-xs"
+                    className="w-full px-2.5 py-1.5 bg-white border border-[#DCE4EE] rounded text-xs text-[#263445] focus:outline-none focus:ring-2 focus:ring-[#102F57]"
                   />
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-amber-800 pl-6 italic">
+              <p className="text-xs text-[#B86B08] pl-6 italic">
                 {t("quotations.taxNotConfiguredWarning")}
               </p>
             )}
 
-            <label className="flex items-start space-x-2.5 cursor-pointer pt-2 border-t border-stone-200">
+            <label className="flex items-start space-x-2.5 cursor-pointer pt-2 border-t border-[#DCE4EE]">
               <input
                 type="checkbox"
                 checked={confirmTaxCheckbox}
                 onChange={(e) => setConfirmTaxCheckbox(e.target.checked)}
-                className="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500 mt-0.5"
+                className="w-4 h-4 accent-[#F7931E] rounded border-[#DCE4EE] focus:ring-[#F7931E] mt-0.5"
               />
-              <span className="text-xs text-stone-700">
+              <span className="text-xs text-[#263445]">
                 {t("quotations.taxObligationVerify")}
               </span>
             </label>
@@ -1020,18 +1048,18 @@ export default function QuotationDetailPage() {
             <button
               onClick={() => setShowIssueModal(false)}
               disabled={issuing}
-              className="px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-lg text-sm"
+              className="px-4 py-2 border border-[#DCE4EE] text-[#102F57] bg-white hover:bg-[#F3F6FA] rounded-lg text-sm font-medium transition"
             >
               {t("common.cancel")}
             </button>
             <button
               onClick={handleIssueQuotation}
               disabled={issuing || !confirmTaxCheckbox}
-              className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition flex items-center space-x-2"
+              className="px-5 py-2 bg-[#F7931E] hover:bg-[#e08215] disabled:opacity-50 text-[#102F57] rounded-lg text-sm font-semibold transition flex items-center space-x-2 shadow-sm"
             >
               {issuing ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-[#102F57] border-t-transparent rounded-full animate-spin"></div>
                   <span>{t("quotations.issuing")}</span>
                 </>
               ) : (
@@ -1051,8 +1079,8 @@ export default function QuotationDetailPage() {
         onClose={() => !updatingStatus && setShowStatusModal(false)}
         title={t("quotations.updateStatusModalTitle")}
       >
-        <div className="space-y-4 text-sm text-stone-700">
-          <p className="text-xs text-stone-500">
+        <div className="space-y-4 text-sm text-[#263445]">
+          <p className="text-xs text-[#64748B]">
             {t("quotations.updateStatusModalDesc")}
           </p>
 
@@ -1064,7 +1092,11 @@ export default function QuotationDetailPage() {
             ].map((opt) => (
               <label
                 key={opt.id}
-                className="flex items-center space-x-3 p-3 border border-stone-200 rounded-lg cursor-pointer hover:bg-stone-50"
+                className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition ${
+                  newStatus === opt.id
+                    ? "border-[#102F57] bg-[#EEF3F9]"
+                    : "border-[#DCE4EE] hover:bg-[#F3F6FA]"
+                }`}
               >
                 <input
                   type="radio"
@@ -1072,9 +1104,9 @@ export default function QuotationDetailPage() {
                   value={opt.id}
                   checked={newStatus === opt.id}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-4 h-4 text-amber-600 focus:ring-amber-500"
+                  className="w-4 h-4 accent-[#102F57]"
                 />
-                <span className="text-xs font-medium text-stone-800">{opt.label}</span>
+                <span className="text-xs font-medium text-[#263445]">{opt.label}</span>
               </label>
             ))}
           </div>
@@ -1083,14 +1115,14 @@ export default function QuotationDetailPage() {
             <button
               onClick={() => setShowStatusModal(false)}
               disabled={updatingStatus}
-              className="px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-lg text-sm"
+              className="px-4 py-2 border border-[#DCE4EE] text-[#102F57] bg-white hover:bg-[#F3F6FA] rounded-lg text-sm font-medium transition"
             >
               {t("common.cancel")}
             </button>
             <button
               onClick={handleUpdateStatus}
               disabled={updatingStatus}
-              className="px-5 py-2 bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition flex items-center space-x-2"
+              className="px-5 py-2 bg-[#102F57] hover:bg-[#0c2444] disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition flex items-center space-x-2 shadow-sm"
             >
               {updatingStatus ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

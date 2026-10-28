@@ -69,7 +69,7 @@ export function ClientForm({
 
       {/* Client / Company Name */}
       <div>
-        <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+        <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
           {t("clients.nameLabel")} <span className="text-red-500">*</span>
         </label>
         <input
@@ -79,14 +79,14 @@ export function ClientForm({
           onChange={handleChange}
           placeholder={t("clients.namePlaceholder")}
           required
-          className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+          className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57] font-devanagari"
         />
       </div>
 
       {/* Contact Person & Phone */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+          <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
             {t("clients.contactPersonLabel")}
           </label>
           <input
@@ -95,12 +95,12 @@ export function ClientForm({
             value={formData.contact_person}
             onChange={handleChange}
             placeholder={t("clients.contactPersonPlaceholder")}
-            className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57] font-devanagari"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+          <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
             {t("clients.phoneLabel")}
           </label>
           <input
@@ -109,7 +109,7 @@ export function ClientForm({
             value={formData.phone}
             onChange={handleChange}
             placeholder={t("clients.phonePlaceholder")}
-            className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57]"
           />
         </div>
       </div>
@@ -117,7 +117,7 @@ export function ClientForm({
       {/* Email & GSTIN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+          <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
             {t("clients.emailLabel")}
           </label>
           <input
@@ -126,12 +126,12 @@ export function ClientForm({
             value={formData.email}
             onChange={handleChange}
             placeholder={t("clients.emailPlaceholder")}
-            className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57]"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+          <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
             {t("clients.gstinLabel")}
           </label>
           <input
@@ -140,14 +140,14 @@ export function ClientForm({
             value={formData.gstin}
             onChange={handleChange}
             placeholder={t("clients.gstinPlaceholder")}
-            className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border uppercase focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+            className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] uppercase focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57]"
           />
         </div>
       </div>
 
       {/* Billing Address */}
       <div>
-        <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+        <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1 font-devanagari">
           {t("clients.billingAddressLabel")}
         </label>
         <textarea
@@ -156,24 +156,24 @@ export function ClientForm({
           value={formData.billing_address}
           onChange={handleChange}
           placeholder={t("clients.billingAddressPlaceholder")}
-          className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+          className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57] font-devanagari"
         />
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-anumaan-border-light">
+      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#DCE4EE]">
         <button
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="px-4 py-2 rounded-md border border-anumaan-border text-sm font-medium text-anumaan-charcoal-700 hover:bg-anumaan-beige-50 transition-colors font-devanagari"
+          className="btn-secondary font-devanagari"
         >
           {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-5 py-2 rounded-md bg-anumaan-charcoal-900 text-white text-sm font-medium hover:bg-anumaan-charcoal-800 transition-colors font-devanagari disabled:opacity-50"
+          className="btn-primary font-devanagari"
         >
           {loading ? t("common.saving") : t("common.save")}
         </button>

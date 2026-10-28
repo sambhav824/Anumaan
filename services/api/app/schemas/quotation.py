@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Literal
 from decimal import Decimal
 from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 QuotationStatus = Literal["draft", "issued", "accepted", "rejected", "expired"]
@@ -86,8 +86,15 @@ class QuotationRead(BaseModel):
     tax_rate: Decimal
     tax_amount: Decimal
     total_amount: Decimal
+    grand_total: Optional[Decimal] = None
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def populate_grand_total(self):
+        if self.grand_total is None:
+            self.grand_total = self.total_amount
+        return self
 
 
 class QuotationDetailRead(QuotationRead):

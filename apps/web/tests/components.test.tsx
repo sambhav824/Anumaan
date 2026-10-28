@@ -54,9 +54,7 @@ describe("Core Component Unit Tests", () => {
     expect(screen.getByText("Rate Library")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
 
-    // Verify 2 Coming Soon badges (Estimates & BOQ is now enabled)
-    const badges = screen.getAllByText("Coming Soon");
-    // Estimates & BOQ and Quotations are now enabled, leaving only Invoices
-    expect(badges.length).toBe(1);
+    // Verify Invoices navigation link is enabled and rendered
+    expect(screen.getByText("Invoices")).toBeInTheDocument();
   });
 });

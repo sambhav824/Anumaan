@@ -828,3 +828,402 @@ def calculate_estimate_totals(
         "gst_amount": gst_amount,
         "grand_total": grand_total,
     }
+
+
+# ------------------------------------------------------------------------------
+# 12. Measurement-Based Calculation Helpers (Length, Area, Volume, Wall Area, etc.)
+# ------------------------------------------------------------------------------
+def calculate_length(length: Any, unit: str = "m") -> Dict[str, Any]:
+    """Calculates linear length quantity."""
+    L = to_decimal(length)
+    if L <= 0:
+        raise ValueError("Length must be strictly positive.")
+    u = unit.lower().strip()
+    norm_unit = "m" if u in ("m", "meter", "metre") else "ft" if u in ("ft", "feet", "foot") else u
+    formula_str = f"Length = {L:.3f} {norm_unit}"
+    return {
+        "quantity": quantize_qty(L),
+        "unit": norm_unit,
+        "formula": formula_str,
+        "calculation_type": "length",
+        "standard_reference": "Direct Linear Measurement",
+    }
+
+
+def calculate_area(length: Any, width: Any, unit: str = "m") -> Dict[str, Any]:
+    """Calculates rectangular plan area: Quantity = Length × Width."""
+    L = to_decimal(length)
+    W = to_decimal(width)
+    if L <= 0 or W <= 0:
+        raise ValueError("Length and width must be strictly positive.")
+    u = unit.lower().strip()
+    area = L * W
+    area_unit = "sqm" if u in ("m", "meter", "metre", "sqm") else "sqft"
+    dim_unit = "m" if area_unit == "sqm" else "ft"
+    formula_str = f"Area = {L:.3f}{dim_unit} \xd7 {W:.3f}{dim_unit} = {area:.4f} {area_unit}"
+    return {
+        "quantity": quantize_qty(area),
+        "unit": area_unit,
+        "formula": formula_str,
+        "length": float(L),
+        "width": float(W),
+        "calculation_type": "area",
+        "standard_reference": "Direct Area Measurement (L \xd7 W)",
+    }
+
+
+def calculate_volume(length: Any, width: Any, height: Any, unit: str = "m") -> Dict[str, Any]:
+    """Calculates 3D volume: Quantity = Length × Width × Height."""
+    L = to_decimal(length)
+    W = to_decimal(width)
+    H = to_decimal(height)
+    if L <= 0 or W <= 0 or H <= 0:
+        raise ValueError("Length, width, and height must be strictly positive.")
+    u = unit.lower().strip()
+    vol = L * W * H
+    vol_unit = "cum" if u in ("m", "meter", "metre", "cum") else "cuft"
+    dim_unit = "m" if vol_unit == "cum" else "ft"
+    formula_str = f"Volume = {L:.3f}{dim_unit} \xd7 {W:.3f}{dim_unit} \xd7 {H:.3f}{dim_unit} = {vol:.4f} {vol_unit}"
+    return {
+        "quantity": quantize_qty(vol),
+        "unit": vol_unit,
+        "formula": formula_str,
+        "length": float(L),
+        "width": float(W),
+        "height": float(H),
+        "calculation_type": "volume",
+        "standard_reference": "Direct Volume Measurement (L \xd7 W \xd7 H)",
+    }
+
+
+def calculate_wall_area(
+    length: Any,
+    height: Any,
+    openings: Optional[List[Dict[str, Any]]] = None,
+    unit: str = "m"
+) -> Dict[str, Any]:
+    """
+    Calculates rectangular wall net area:
+    Gross Wall Area = Length × Height
+    Net Wall Area = Gross Wall Area − Door & Window Opening Areas
+    """
+    L = to_decimal(length)
+    H = to_decimal(height)
+    if L <= 0 or H <= 0:
+        raise ValueError("Wall length and height must be strictly positive.")
+
+    u = unit.lower().strip()
+    area_unit = "sqm" if u in ("m", "meter", "metre", "sqm") else "sqft"
+    dim_unit = "m" if area_unit == "sqm" else "ft"
+
+    gross_area = L * H
+    total_deduction = Decimal("0.0")
+    deduction_details = []
+
+    if openings:
+        for op in openings:
+            op_name = op.get("name") or op.get("description") or "Opening"
+            op_w = to_decimal(op.get("width") or op.get("length", 0))
+            op_h = to_decimal(op.get("height", 0))
+            cnt = to_decimal(op.get("count", 1))
+
+            if op_w <= 0 or op_h <= 0 or cnt <= 0:
+                continue
+
+            op_area = op_w * op_h * cnt
+            total_deduction += op_area
+            deduction_details.append(
+                f"{op_name}: {float(cnt):.0f}x ({op_w:.2f}\xd7{op_h:.2f}{dim_unit} = {op_area:.3f} {area_unit})"
+            )
+
+    if total_deduction > gross_area:
+        raise ValueError("Total opening deductions cannot exceed wall gross area.")
+
+    net_area = gross_area - total_deduction
+    formula_str = (
+        f"Gross Wall ({L:.2f}{dim_unit} \xd7 {H:.2f}{dim_unit} = {gross_area:.2f} {area_unit})"
+        f" - Openings ({total_deduction:.2f} {area_unit}) = {net_area:.2f} {area_unit} net"
+    )
+
+    return {
+        "quantity": quantize_qty(net_area),
+        "unit": area_unit,
+        "gross_area": quantize_qty(gross_area),
+        "deductions": quantize_qty(total_deduction),
+        "net_area": quantize_qty(net_area),
+        "openings_breakdown": deduction_details,
+        "formula": formula_str,
+        "calculation_type": "wall_area",
+        "standard_reference": "Net Wall Area = Gross Area - Openings Deductions",
+    }
+
+
+def calculate_count(count: Any, unit: str = "nos") -> Dict[str, Any]:
+    """Calculates piece or unit count."""
+    C = to_decimal(count)
+    if C <= 0:
+        raise ValueError("Count must be strictly positive.")
+    formula_str = f"Count = {float(C):.0f} {unit}"
+    return {
+        "quantity": quantize_qty(C, places=2),
+        "unit": unit,
+        "formula": formula_str,
+        "calculation_type": "count",
+        "standard_reference": "Unit / Piece Count",
+    }
+
+
+def calculate_weight(weight: Any, unit: str = "kg") -> Dict[str, Any]:
+    """Calculates material weight in kg or tonnes."""
+    W = to_decimal(weight)
+    if W <= 0:
+        raise ValueError("Weight must be strictly positive.")
+    formula_str = f"Weight = {W:.2f} {unit}"
+    return {
+        "quantity": quantize_qty(W, places=2),
+        "unit": unit,
+        "formula": formula_str,
+        "calculation_type": "weight",
+        "standard_reference": "Weight Measurement",
+    }
+
+
+def calculate_time(duration: Any, unit: str = "day") -> Dict[str, Any]:
+    """Calculates labour/equipment time in hours or days."""
+    D = to_decimal(duration)
+    if D <= 0:
+        raise ValueError("Duration must be strictly positive.")
+    formula_str = f"Time = {D:.2f} {unit}"
+    return {
+        "quantity": quantize_qty(D, places=2),
+        "unit": unit,
+        "formula": formula_str,
+        "calculation_type": "time",
+        "standard_reference": "Time / Work Duration",
+    }
+
+
+def calculate_lump_sum(description: Optional[str] = None) -> Dict[str, Any]:
+    """Calculates fixed lump sum item."""
+    desc = description or "Lump sum specified work"
+    return {
+        "quantity": Decimal("1.0000"),
+        "unit": "ls",
+        "formula": f"Lump Sum: {desc}",
+        "calculation_type": "lump_sum",
+        "standard_reference": "Fixed Lump Sum (Scope Defined)",
+    }
+
+
+
+# ------------------------------------------------------------------------------
+# Quick Estimate & Boundary Wall Civil Estimation Engines
+# ------------------------------------------------------------------------------
+
+def calculate_quick_building_estimate(
+    built_up_area_sqft: Any,
+    floors: int = 1,
+    quality_tier: str = "standard",
+    region_id: str = "national_cpwd",
+) -> Dict[str, Any]:
+    """
+    Calculates quick preliminary building budget and material consumption using
+    standard Indian civil engineering benchmarks (CPWD/State PWD building cost indices).
+    """
+    area = to_decimal(built_up_area_sqft)
+    if area <= 0:
+        raise ValueError("Built-up area must be strictly positive.")
+    num_floors = max(1, int(floors))
+    total_area = area * Decimal(num_floors)
+    q = quality_tier.lower().strip()
+
+    # Cost coefficients per sq.ft based on regional CSR indices
+    rates_matrix = {
+        "maharashtra_pwd": {"economy": Decimal("1550.00"), "standard": Decimal("2100.00"), "luxury": Decimal("2950.00")},
+        "karnataka_pwd": {"economy": Decimal("1500.00"), "standard": Decimal("2050.00"), "luxury": Decimal("2900.00")},
+        "national_cpwd": {"economy": Decimal("1450.00"), "standard": Decimal("1950.00"), "luxury": Decimal("2800.00")},
+    }
+    reg_rates = rates_matrix.get(region_id, rates_matrix["national_cpwd"])
+    cost_per_sqft = reg_rates.get(q, reg_rates["standard"])
+    total_cost = quantize_currency(total_area * cost_per_sqft)
+
+    # Material consumption factors per sq.ft
+    if q == "economy":
+        cement_factor = Decimal("0.40")  # bags/sqft
+        steel_factor = Decimal("3.20")   # kg/sqft
+        sand_factor = Decimal("1.50")    # cuft/sqft
+        agg_factor = Decimal("1.20")     # cuft/sqft
+        brick_factor = Decimal("16")     # bricks/sqft
+    elif q == "luxury":
+        cement_factor = Decimal("0.52")
+        steel_factor = Decimal("4.80")
+        sand_factor = Decimal("2.00")
+        agg_factor = Decimal("1.60")
+        brick_factor = Decimal("22")
+    else:  # standard
+        cement_factor = Decimal("0.45")
+        steel_factor = Decimal("3.80")
+        sand_factor = Decimal("1.75")
+        agg_factor = Decimal("1.40")
+        brick_factor = Decimal("19")
+
+    cement_bags = quantize_qty(total_area * cement_factor, places=0)
+    steel_kg = quantize_qty(total_area * steel_factor, places=0)
+    steel_tonnes = quantize_qty(steel_kg / Decimal("1000.0"), places=2)
+    sand_cuft = quantize_qty(total_area * sand_factor, places=1)
+    sand_brass = quantize_qty(sand_cuft / BRASS_TO_CUFT, places=2)
+    agg_cuft = quantize_qty(total_area * agg_factor, places=1)
+    agg_brass = quantize_qty(agg_cuft / BRASS_TO_CUFT, places=2)
+    bricks_count = quantize_qty(total_area * brick_factor, places=0)
+
+    # Suggested BOQ initial lines for 1-click detailed estimate creation
+    # Excavation (approx 0.15 cum per sqft)
+    exc_qty = quantize_qty(total_area * Decimal("0.015"), places=2)
+    # PCC concrete (approx 0.015 cum per sqft)
+    pcc_qty = quantize_qty(total_area * Decimal("0.012"), places=2)
+    # RCC frame concrete (approx 0.055 cum per sqft)
+    rcc_qty = quantize_qty(total_area * Decimal("0.055"), places=2)
+    # Brickwork (approx 0.04 cum per sqft)
+    brick_vol = quantize_qty(total_area * Decimal("0.04"), places=2)
+    # Plaster (approx 2.5 sqm per sqft)
+    plaster_qty = quantize_qty(total_area * Decimal("0.23"), places=2)
+    # Flooring (approx 0.85 sqm per sqft)
+    flooring_qty = quantize_qty(total_area * Decimal("0.08"), places=2)
+
+    return {
+        "built_up_area_sqft": quantize_qty(total_area, places=2),
+        "cost_per_sqft": cost_per_sqft,
+        "cost_per_sqm": quantize_currency(cost_per_sqft * SQM_TO_SQFT),
+        "total_estimated_cost": total_cost,
+        "quality_tier": q,
+        "floors": num_floors,
+        "region_id": region_id,
+        "materials": {
+            "cement_bags": cement_bags,
+            "steel_kg": steel_kg,
+            "steel_tonnes": steel_tonnes,
+            "sand_cuft": sand_cuft,
+            "sand_brass": sand_brass,
+            "aggregate_cuft": agg_cuft,
+            "aggregate_brass": agg_brass,
+            "bricks_count": bricks_count,
+        },
+        "boq_preview": [
+            {"item_number": "1.1", "description": "Earthwork excavation in foundation soil", "category": "earthwork", "quantity": exc_qty, "unit": "cum"},
+            {"item_number": "2.1", "description": "Plain Cement Concrete (PCC 1:4:8) in foundation", "category": "concrete", "quantity": pcc_qty, "unit": "cum"},
+            {"item_number": "3.1", "description": "Reinforced Cement Concrete (RCC M20/M25) in frame", "category": "concrete", "quantity": rcc_qty, "unit": "cum"},
+            {"item_number": "4.1", "description": "TMT Fe 500D Reinforcement Steel Rebar (supply & bend)", "category": "reinforcement", "quantity": steel_tonnes, "unit": "tonne"},
+            {"item_number": "5.1", "description": "Brick Masonry in Cement Mortar 1:6", "category": "brickwork", "quantity": brick_vol, "unit": "cum"},
+            {"item_number": "6.1", "description": "Internal and External Cement Plastering 1:4", "category": "plaster", "quantity": plaster_qty, "unit": "sqm"},
+            {"item_number": "7.1", "description": "Vitrified Ceramic Floor Tiles 600x600mm", "category": "finishing", "quantity": flooring_qty, "unit": "sqm"},
+        ],
+        "disclaimer": "Preliminary budget estimate based on state PWD building cost index. Does not replace detailed architectural/structural BOQ.",
+    }
+
+
+def calculate_boundary_wall_quantities(
+    length_m: Any,
+    height_m: Any,
+    thickness_mm: Any = 230,
+    masonry_type: str = "clay_brick",
+    gate_width_m: Any = 0,
+    gate_height_m: Any = 0,
+    foundation_depth_m: Any = Decimal("0.8"),
+    coping_thickness_mm: Any = Decimal("75"),
+    include_plaster: bool = True,
+    include_paint: bool = True,
+) -> Dict[str, Any]:
+    """
+    Calculates detailed civil quantities for boundary walls as per IS 1200.
+    Includes excavation, foundation PCC, masonry, coping concrete, plaster, and paint.
+    """
+    L = to_decimal(length_m)
+    H = to_decimal(height_m)
+    T = to_decimal(thickness_mm) / Decimal("1000.0")  # m
+    D = to_decimal(foundation_depth_m)
+    GW = to_decimal(gate_width_m) if gate_width_m else Decimal("0.0")
+    GH = to_decimal(gate_height_m) if gate_height_m else Decimal("0.0")
+
+    if L <= 0 or H <= 0 or T <= 0:
+        raise ValueError("Wall length, height, and thickness must be strictly positive.")
+
+    # Deduct gate opening from net wall area
+    gross_area = L * H
+    gate_area = GW * GH
+    net_area = max(Decimal("0.0"), gross_area - gate_area)
+
+    # Masonry Volume
+    masonry_vol = quantize_qty(net_area * T, places=4)
+
+    # Bricks or AAC blocks count
+    if "aac" in masonry_type.lower():
+        # AAC blocks 600x200x(T)
+        block_vol = Decimal("0.6") * Decimal("0.2") * T
+        units_count = quantize_qty((masonry_vol / block_vol) * Decimal("1.03"), places=0)  # 3% wastage
+        units_label = "AAC Blocks (Nos)"
+    else:
+        # Standard Red Bricks (500 per cum + 5% wastage)
+        units_count = quantize_qty(masonry_vol * Decimal("525.0"), places=0)
+        units_label = "Red Clay Bricks (Nos)"
+
+    # Foundation Earthwork Excavation (Trench width = T + 0.3m)
+    trench_w = T + Decimal("0.30")
+    excavation_vol = quantize_qty(L * trench_w * D, places=4)
+
+    # Foundation PCC 1:4:8 Concrete (Thickness = 0.15m)
+    pcc_vol = quantize_qty(L * trench_w * Decimal("0.15"), places=4)
+
+    # Coping Concrete on top of wall (Thickness = coping_thickness_mm)
+    coping_t = to_decimal(coping_thickness_mm) / Decimal("1000.0")
+    coping_vol = quantize_qty(L * T * coping_t, places=4)
+
+    # Plastering (Both sides + top coping)
+    plaster_area = Decimal("0.0")
+    if include_plaster:
+        plaster_area = quantize_qty((net_area * Decimal("2.0")) + (L * T), places=2)
+
+    # Painting (Same as plaster area)
+    paint_area = plaster_area if include_paint else Decimal("0.0")
+
+    # Cement consumption for mortar & concrete
+    # PCC: ~3.4 bags/cum; Masonry mortar 1:6: ~1.2 bags/cum; Plaster 1:4: ~0.15 bags/sqm
+    cement_bags = quantize_qty(
+        (pcc_vol * Decimal("3.4")) +
+        (coping_vol * Decimal("7.0")) +
+        (masonry_vol * Decimal("1.2")) +
+        (plaster_area * Decimal("0.15")),
+        places=0
+    )
+
+    sand_cum = quantize_qty(
+        (pcc_vol * Decimal("0.45")) +
+        (masonry_vol * Decimal("0.24")) +
+        (plaster_area * Decimal("0.02")),
+        places=2
+    )
+
+    return {
+        "wall_length_m": L,
+        "wall_height_m": H,
+        "wall_thickness_mm": thickness_mm,
+        "net_wall_area_sqm": quantize_qty(net_area, places=2),
+        "masonry_volume_cum": masonry_vol,
+        "units_count": units_count,
+        "units_label": units_label,
+        "excavation_volume_cum": excavation_vol,
+        "foundation_pcc_cum": pcc_vol,
+        "coping_concrete_cum": coping_vol,
+        "plaster_area_sqm": plaster_area,
+        "paint_area_sqm": paint_area,
+        "cement_bags": cement_bags,
+        "sand_cum": sand_cum,
+        "boq_preview": [
+            {"item_number": "1.1", "description": f"Earthwork excavation for boundary wall foundation ({float(D):.1f}m deep)", "category": "earthwork", "quantity": excavation_vol, "unit": "cum"},
+            {"item_number": "2.1", "description": "PCC 1:4:8 bed concrete in foundation trench", "category": "concrete", "quantity": pcc_vol, "unit": "cum"},
+            {"item_number": "3.1", "description": f"Boundary wall masonry {thickness_mm}mm in 1:6 cement mortar", "category": "brickwork", "quantity": masonry_vol, "unit": "cum"},
+            {"item_number": "4.1", "description": "PCC 1:2:4 coping concrete on top of wall with drip mould", "category": "concrete", "quantity": coping_vol, "unit": "cum"},
+            {"item_number": "5.1", "description": "15mm cement plaster 1:4 on both sides of boundary wall", "category": "plaster", "quantity": plaster_area, "unit": "sqm"},
+            {"item_number": "6.1", "description": "Exterior weather-shield acrylic paint 2 coats over primer", "category": "painting", "quantity": paint_area, "unit": "sqm"},
+        ],
+        "disclaimer": "Structural safety requirements (RCC column spacing, footing size, reinforcement) require certified civil engineering design.",
+    }

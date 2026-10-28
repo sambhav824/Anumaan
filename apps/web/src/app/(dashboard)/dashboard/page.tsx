@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FolderKanban,
   Users,
@@ -24,6 +25,7 @@ import { ClientForm, ClientFormData } from "../../../components/ClientForm";
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { currentOrg } = useOrg();
+  const router = useRouter();
 
   const [metrics, setMetrics] = useState({
     total_projects: 0,
@@ -77,9 +79,9 @@ export default function DashboardPage() {
     if (!currentOrg?.id) return;
     setModalLoading(true);
     try {
-      await api.createProject(currentOrg.id, data);
+      const created = await api.createProject(currentOrg.id, data);
       setShowCreateProjectModal(false);
-      await loadDashboardData();
+      router.push(`/projects/${created.id}`);
     } finally {
       setModalLoading(false);
     }
@@ -100,12 +102,12 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
       {/* Top Banner & Quick Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-anumaan-border-light">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#DCE4EE]">
         <div>
-          <h1 className="text-2xl font-bold text-anumaan-charcoal-900 font-devanagari">
+          <h1 className="text-2xl font-bold text-[#102F57] font-devanagari">
             {t("dashboard.title")}
           </h1>
-          <p className="text-sm text-anumaan-charcoal-500 font-devanagari mt-1">
+          <p className="text-sm text-[#64748B] font-devanagari mt-1">
             {t("dashboard.subtitle")}
           </p>
         </div>
@@ -115,17 +117,17 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setShowAddClientModal(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md border border-anumaan-border bg-white text-anumaan-charcoal-800 text-sm font-medium hover:bg-anumaan-beige-50 transition-colors font-devanagari"
+            className="btn-secondary font-devanagari"
           >
-            <Plus className="w-4 h-4 text-anumaan-gold-600" />
+            <Plus className="w-4 h-4 text-[#F7931E]" />
             <span>{t("dashboard.addClientQuick")}</span>
           </button>
           <button
             type="button"
             onClick={() => setShowCreateProjectModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-anumaan-charcoal-900 text-white text-sm font-medium hover:bg-anumaan-charcoal-800 transition-colors shadow-xs font-devanagari"
+            className="btn-primary font-devanagari"
           >
-            <Plus className="w-4 h-4 text-anumaan-gold-500" />
+            <Plus className="w-4 h-4 text-[#F7931E]" />
             <span>{t("dashboard.createProjectQuick")}</span>
           </button>
         </div>
@@ -134,95 +136,95 @@ export default function DashboardPage() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Projects */}
-        <div className="p-5 rounded-xl bg-white border border-anumaan-border shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-anumaan-charcoal-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider font-devanagari">
+        <div className="p-5 rounded-2xl bg-white border border-[#DCE4EE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#64748B] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider font-devanagari text-[#102F57]">
               {t("dashboard.totalProjects")}
             </span>
-            <div className="p-2 rounded-lg bg-anumaan-gold-50 text-anumaan-gold-600">
+            <div className="p-2 rounded-xl bg-[#EEF3F9] text-[#102F57]">
               <FolderKanban className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-anumaan-charcoal-900 font-sans">
+            <div className="text-3xl font-bold text-[#102F57] font-sans">
               {metrics.total_projects}
             </div>
-            <p className="text-xs text-anumaan-charcoal-500 font-devanagari mt-1">
+            <p className="text-xs text-[#64748B] font-devanagari mt-1">
               {metrics.active_projects} {t("dashboard.activeProjects")}
             </p>
           </div>
         </div>
 
         {/* Total Clients */}
-        <div className="p-5 rounded-xl bg-white border border-anumaan-border shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-anumaan-charcoal-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider font-devanagari">
+        <div className="p-5 rounded-2xl bg-white border border-[#DCE4EE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#64748B] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider font-devanagari text-[#102F57]">
               {t("dashboard.totalClients")}
             </span>
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+            <div className="p-2 rounded-xl bg-[#FFF6EB] text-[#F7931E]">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-anumaan-charcoal-900 font-sans">
+            <div className="text-3xl font-bold text-[#102F57] font-sans">
               {metrics.total_clients}
             </div>
-            <p className="text-xs text-anumaan-charcoal-500 font-devanagari mt-1">
+            <p className="text-xs text-[#64748B] font-devanagari mt-1">
               {t("clients.title")}
             </p>
           </div>
         </div>
 
-        {/* Draft Estimates (Real 0 with Coming Soon indicator) */}
-        <div className="p-5 rounded-xl bg-white border border-anumaan-border shadow-xs flex flex-col justify-between opacity-85">
-          <div className="flex items-center justify-between text-anumaan-charcoal-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider font-devanagari">
+        {/* Estimates & BOQ */}
+        <div className="p-5 rounded-2xl bg-white border border-[#DCE4EE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#64748B] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider font-devanagari text-[#102F57]">
               {t("dashboard.draftEstimates")}
             </span>
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+            <div className="p-2 rounded-xl bg-[#FEF7EB] text-[#B86B08]">
               <Calculator className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-anumaan-charcoal-400 font-sans">
-              0
+            <div className="text-3xl font-bold text-[#102F57] font-sans">
+              {metrics.draft_estimates}
             </div>
-            <p className="text-xs text-anumaan-charcoal-400 font-devanagari mt-1">
-              {t("nav.comingSoon")} (Phase 2)
+            <p className="text-xs text-[#64748B] font-devanagari mt-1">
+              Active Project BOQs
             </p>
           </div>
         </div>
 
-        {/* Quotations (Pending & Accepted Real 0) */}
-        <div className="p-5 rounded-xl bg-white border border-anumaan-border shadow-xs flex flex-col justify-between opacity-85">
-          <div className="flex items-center justify-between text-anumaan-charcoal-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider font-devanagari">
+        {/* Quotations */}
+        <div className="p-5 rounded-2xl bg-white border border-[#DCE4EE] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#64748B] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider font-devanagari text-[#102F57]">
               {t("dashboard.pendingQuotations")}
             </span>
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="p-2 rounded-xl bg-[#EBF6F1] text-[#16835D]">
               <FileSpreadsheet className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-anumaan-charcoal-400 font-sans">
-              0
+            <div className="text-3xl font-bold text-[#102F57] font-sans">
+              {metrics.pending_quotations + (metrics.accepted_quotations || 0)}
             </div>
-            <p className="text-xs text-anumaan-charcoal-400 font-devanagari mt-1">
-              {t("nav.comingSoon")} (Phase 2)
+            <p className="text-xs text-[#64748B] font-devanagari mt-1">
+              {metrics.accepted_quotations || 0} Accepted Proposals
             </p>
           </div>
         </div>
       </div>
 
       {/* Recent Projects Table / Section */}
-      <div className="bg-white rounded-xl border border-anumaan-border shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-anumaan-border-light flex items-center justify-between">
-          <h2 className="text-base font-semibold text-anumaan-charcoal-900 font-devanagari">
+      <div className="bg-white rounded-2xl border border-[#DCE4EE] shadow-xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#DCE4EE] flex items-center justify-between bg-white">
+          <h2 className="text-base font-bold text-[#102F57] font-devanagari">
             {t("dashboard.recentProjects")}
           </h2>
           <Link
             href="/projects"
-            className="text-xs font-semibold text-anumaan-gold-600 hover:text-anumaan-gold-700 flex items-center gap-1 font-devanagari"
+            className="text-xs font-bold text-[#102F57] hover:text-[#F7931E] flex items-center gap-1 font-devanagari transition-colors"
           >
             <span>{t("dashboard.viewAllProjects")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -231,21 +233,21 @@ export default function DashboardPage() {
 
         {recentProjects.length === 0 ? (
           <div className="py-12 px-4 text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-anumaan-beige-100 flex items-center justify-center text-anumaan-charcoal-400">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#EEF3F9] flex items-center justify-center text-[#102F57]">
               <FolderKanban className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-semibold text-anumaan-charcoal-900 font-devanagari">
+            <h3 className="text-sm font-bold text-[#102F57] font-devanagari">
               {t("dashboard.emptyProjectsTitle")}
             </h3>
-            <p className="text-xs text-anumaan-charcoal-500 font-devanagari max-w-sm mx-auto mt-1 mb-4">
+            <p className="text-xs text-[#64748B] font-devanagari max-w-sm mx-auto mt-1 mb-4">
               {t("dashboard.emptyProjectsSubtitle")}
             </p>
             <button
               type="button"
               onClick={() => setShowCreateProjectModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-anumaan-charcoal-900 text-white text-xs font-semibold hover:bg-anumaan-charcoal-800 transition-colors font-devanagari"
+              className="btn-primary font-devanagari"
             >
-              <Plus className="w-3.5 h-3.5 text-anumaan-gold-500" />
+              <Plus className="w-3.5 h-3.5 text-[#F7931E]" />
               <span>{t("dashboard.createProjectQuick")}</span>
             </button>
           </div>
@@ -253,55 +255,60 @@ export default function DashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-anumaan-border-light bg-anumaan-beige-50/50 text-xs font-semibold uppercase tracking-wider text-anumaan-charcoal-500 font-devanagari">
-                  <th className="px-6 py-3">{t("projects.nameLabel")}</th>
-                  <th className="px-6 py-3">{t("projects.typeLabel")}</th>
-                  <th className="px-6 py-3">{t("projects.clientLabel")}</th>
-                  <th className="px-6 py-3">{t("projects.statusLabel")}</th>
-                  <th className="px-6 py-3 text-right">{t("common.actions")}</th>
+                <tr className="border-b border-[#DCE4EE] bg-[#E8EEF5] text-xs font-bold uppercase tracking-wider text-[#102F57] font-devanagari">
+                  <th className="px-6 py-3.5">{t("projects.nameLabel")}</th>
+                  <th className="px-6 py-3.5">{t("projects.typeLabel")}</th>
+                  <th className="px-6 py-3.5">{t("projects.clientLabel")}</th>
+                  <th className="px-6 py-3.5">{t("projects.statusLabel")}</th>
+                  <th className="px-6 py-3.5 text-right">{t("common.actions")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-anumaan-border-light">
+              <tbody className="divide-y divide-[#DCE4EE]">
                 {recentProjects.map((p) => {
                   const isRoad = p.project_type === "road";
                   return (
-                    <tr key={p.id} className="hover:bg-anumaan-beige-50/30 transition-colors">
-                      <td className="px-6 py-3.5 font-medium text-anumaan-charcoal-900 font-devanagari">
-                        {p.name}
+                    <tr key={p.id} className="hover:bg-[#F3F6FA]/70 transition-colors">
+                      <td className="px-6 py-3.5 font-medium text-[#263445] font-devanagari">
+                        <Link
+                          href={`/projects/${p.id}`}
+                          className="font-bold text-[#102F57] hover:underline block"
+                        >
+                          {p.name}
+                        </Link>
                         {p.site_location && (
-                          <span className="block text-xs font-normal text-anumaan-charcoal-400">
+                          <span className="block text-xs font-normal text-[#64748B]">
                             {p.site_location}, {p.city}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-3.5">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-anumaan-beige-100 text-anumaan-charcoal-700 font-devanagari">
-                          {isRoad ? <Car className="w-3 h-3 text-amber-600" /> : <Building className="w-3 h-3 text-blue-600" />}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#EEF3F9] text-[#102F57] font-devanagari">
+                          {isRoad ? <Car className="w-3 h-3 text-[#F7931E]" /> : <Building className="w-3 h-3 text-[#102F57]" />}
                           {t(`projectType.${p.project_type}`)}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 text-anumaan-charcoal-600 font-devanagari">
+                      <td className="px-6 py-3.5 text-[#64748B] font-devanagari">
                         {p.client_name || "—"}
                       </td>
                       <td className="px-6 py-3.5">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium font-devanagari ${
                           p.status === "in_progress"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            ? "bg-[#FEF7EB] text-[#B86B08] border border-[#FCD6A8]"
                             : p.status === "completed"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            ? "bg-[#EBF6F1] text-[#16835D] border border-[#B5E3CE]"
                             : p.status === "archived"
-                            ? "bg-gray-100 text-gray-700 border border-gray-200"
-                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                            ? "bg-[#F1F5F9] text-[#64748B] border border-[#DCE4EE]"
+                            : "bg-[#EEF3F9] text-[#102F57] border border-[#DCE4EE]"
                         }`}>
                           {t(`status.${p.status}`)}
                         </span>
                       </td>
                       <td className="px-6 py-3.5 text-right">
                         <Link
-                          href={`/projects`}
-                          className="text-xs font-semibold text-anumaan-gold-600 hover:text-anumaan-gold-700 font-devanagari"
+                          href={`/projects/${p.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#102F57] text-white hover:bg-[#0c2444] rounded-lg transition shadow-2xs font-devanagari"
                         >
-                          {t("common.viewDetails")}
+                          <span>Workspace ➔</span>
                         </Link>
                       </td>
                     </tr>

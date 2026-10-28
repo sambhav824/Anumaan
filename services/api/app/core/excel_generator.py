@@ -292,8 +292,7 @@ def generate_quotation_excel(quotation_data: Dict[str, Any]) -> bytes:
     subtotal = float(fin.get("subtotal") or 0)
     oh_amt = float(fin.get("overhead_amount") or 0)
     cont_amt = float(fin.get("contingency_amount") or 0)
-    disc_amt = float(fin.get("discount_amount") or 0)
-    taxable_amt = float(fin.get("taxable_amount") or (subtotal + oh_amt + cont_amt - disc_amt))
+    taxable_amt = float(fin.get("taxable_amount") or (subtotal + oh_amt + cont_amt))
     tax_configured = bool(fin.get("tax_configured", False))
     tax_rate = float(fin.get("tax_rate") or 0)
     tax_name = str(fin.get("tax_name") or "GST")
@@ -312,7 +311,6 @@ def generate_quotation_excel(quotation_data: Dict[str, Any]) -> bytes:
         (labels["subtotal"], subtotal, False),
         (labels["overhead"], oh_amt, False) if oh_amt > 0 else None,
         (labels["contingency"], cont_amt, False) if cont_amt > 0 else None,
-        (labels["discount"], -disc_amt, False) if disc_amt > 0 else None,
         (labels["taxable"], taxable_amt, True),
         (tax_label, tax_amt, False),
         (labels["grand_total"], grand_total, True),

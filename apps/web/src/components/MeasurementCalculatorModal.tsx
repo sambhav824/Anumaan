@@ -4,6 +4,14 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "./Modal";
 import { useTranslation } from "../context/I18nContext";
 import {
+  calculateLength,
+  calculateArea,
+  calculateVolume,
+  calculateWallArea,
+  calculateCount,
+  calculateWeight,
+  calculateTime,
+  calculateLumpSum,
   calculateExcavation,
   calculateConcrete,
   calculateSlabConcrete,
@@ -26,9 +34,24 @@ import {
   Layers,
   Ruler,
   Info,
+  Clock,
+  Scale,
+  Hash,
+  Square,
+  Box,
 } from "lucide-react";
 
 export type FormulaType =
+  // Basic Measurements
+  | "length"
+  | "area"
+  | "volume"
+  | "wall_area"
+  | "count"
+  | "weight"
+  | "time"
+  | "lump_sum"
+  // Engineering Standards (IS 1200 / MoRTH)
   | "excavation"
   | "concrete"
   | "slab_concrete"
@@ -52,28 +75,35 @@ export function MeasurementCalculatorModal({
   isOpen,
   onClose,
   onApply,
-  initialFormula = "excavation",
+  initialFormula = "area",
   initialDetails,
 }: MeasurementCalculatorModalProps) {
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<"basic" | "engineering">("basic");
   const [formulaType, setFormulaType] = useState<FormulaType>(initialFormula);
   const [unit, setUnit] = useState<string>("m");
 
-  // Form states
+  // Basic measurement inputs
   const [length, setLength] = useState<number>(10);
   const [width, setWidth] = useState<number>(5);
-  const [depth, setDepth] = useState<number>(2);
   const [height, setHeight] = useState<number>(3);
+  const [depth, setDepth] = useState<number>(2);
   const [thickness, setThickness] = useState<number>(0.23);
+  const [countVal, setCountVal] = useState<number>(10);
+  const [weightVal, setWeightVal] = useState<number>(100);
+  const [timeVal, setTimeVal] = useState<number>(8);
+  const [lumpSumDesc, setLumpSumDesc] = useState<string>("Contractor preliminary work & site mobilization");
+
+  // Engineering parameters
   const [area, setArea] = useState<number>(100);
   const [sides, setSides] = useState<number>(1);
   const [coats, setCoats] = useState<number>(2);
   const [coverage, setCoverage] = useState<number>(10);
-  const [wastagePct, setWastagePct] = useState<number>(2.0);
-  const [swellFactor, setSwellFactor] = useState<number>(0.20);
+  const [wastagePct, setWastagePct] = useState<number>(0.0);
+  const [swellFactor, setSwellFactor] = useState<number>(0.0);
   const [compactionFactor, setCompactionFactor] = useState<number>(1.25);
 
-  // Openings (for brickwork, plaster)
+  // Openings (for wall area, brickwork, plaster)
   const [openings, setOpenings] = useState<OpeningDimension[]>([
     { length: 1.2, height: 2.1, count: 1, description: "Door D1" },
   ]);
@@ -91,24 +121,70 @@ export function MeasurementCalculatorModal({
 
   // Live calculated result
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [calcError, setCalcError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialFormula) setFormulaType(initialFormula);
+    if (initialFormula) {
+      setFormulaType(initialFormula);
+      const isEng = [
+        "excavation",
+        "concrete",
+        "slab_concrete",
+        "brickwork",
+        "plaster",
+        "flooring",
+        "painting",
+        "reinforcement",
+        "road_layers",
+        "road_cross_sections",
+      ].includes(initialFormula);
+      setActiveTab(isEng ? "engineering" : "basic");
+    }
     if (initialDetails) {
-      if (initialDetails.length !== undefined) setLength(initialDetails.length);
-      if (initialDetails.width !== undefined) setWidth(initialDetails.width);
-      if (initialDetails.depth !== undefined) setDepth(initialDetails.depth);
-      if (initialDetails.height !== undefined) setHeight(initialDetails.height);
-      if (initialDetails.thickness !== undefined) setThickness(initialDetails.thickness);
-      if (initialDetails.area !== undefined) setArea(initialDetails.area);
+      if (initialDetails.length !== undefined) setLength(Number(initialDetails.length));
+      if (initialDetails.width !== undefined) setWidth(Number(initialDetails.width));
+      if (initialDetails.height !== undefined) setHeight(Number(initialDetails.height));
+      if (initialDetails.depth !== undefined) setDepth(Number(initialDetails.depth));
+      if (initialDetails.thickness !== undefined) setThickness(Number(initialDetails.thickness));
+      if (initialDetails.area !== undefined) setArea(Number(initialDetails.area));
+      if (initialDetails.unit !== undefined) setUnit(initialDetails.unit);
     }
   }, [initialFormula, initialDetails, isOpen]);
 
   // Recalculate on any input change
   useEffect(() => {
     try {
+      setCalcError(null);
       let res: CalculationResult;
+
       switch (formulaType) {
+        // Basic Measurement Types
+        case "length":
+          res = calculateLength(length, unit);
+          break;
+        case "area":
+          res = calculateArea(length, width, unit);
+          break;
+        case "volume":
+          res = calculateVolume(length, width, height, unit);
+          break;
+        case "wall_area":
+          res = calculateWallArea(length, height, openings, unit);
+          break;
+        case "count":
+          res = calculateCount(countVal, unit === "piece" ? "piece" : "nos");
+          break;
+        case "weight":
+          res = calculateWeight(weightVal, unit === "tonne" ? "tonne" : "kg");
+          break;
+        case "time":
+          res = calculateTime(timeVal, unit === "hour" ? "hour" : "day");
+          break;
+        case "lump_sum":
+          res = calculateLumpSum(lumpSumDesc);
+          break;
+
+        // Engineering Standards (IS 1200 / MoRTH)
         case "excavation":
           res = calculateExcavation(length, width, depth, unit, swellFactor);
           break;
@@ -139,19 +215,26 @@ export function MeasurementCalculatorModal({
         case "road_cross_sections":
           res = calculateRoadCrossSections(area1, area2, distance, unit === "m" ? "sqm" : "sqft", unit);
           break;
+        default:
+          res = calculateArea(length, width, unit);
       }
       setResult(res);
-    } catch (err) {
-      console.error("Calculation error:", err);
+    } catch (err: any) {
+      setCalcError(err?.message || "Invalid measurement dimensions.");
+      setResult(null);
     }
   }, [
     formulaType,
     unit,
     length,
     width,
-    depth,
     height,
+    depth,
     thickness,
+    countVal,
+    weightVal,
+    timeVal,
+    lumpSumDesc,
     area,
     sides,
     coats,
@@ -192,7 +275,7 @@ export function MeasurementCalculatorModal({
     if (!result) return;
     const details = {
       formula_type: formulaType,
-      unit,
+      unit: result.unit,
       formula: result.formula,
       ...result.breakdown,
     };
@@ -204,525 +287,617 @@ export function MeasurementCalculatorModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${t("estimates.open_calculator")} (IS 1200)`}
+      title="मापन कॅल्क्युलेटर • Measurement-Based Quantity Calculator"
       maxWidth="xl"
     >
-      <div className="space-y-6">
-        {/* Formula Selection Tabs */}
-        <div>
-          <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-2">
-            {t("estimates.select_formula")}
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              { id: "excavation", label: t("calcTypes.excavation"), sub: "L × W × D" },
-              { id: "concrete", label: t("calcTypes.concrete"), sub: "L × W × T" },
-              { id: "slab_concrete", label: t("calcTypes.slab_concrete"), sub: "Area × T" },
-              { id: "brickwork", label: t("calcTypes.brickwork"), sub: "IS Openings" },
-              { id: "plaster", label: t("calcTypes.plaster"), sub: "IS 1200 Deduction" },
-              { id: "flooring", label: t("calcTypes.flooring"), sub: "Area + Wastage" },
-              { id: "painting", label: t("calcTypes.painting"), sub: "Coats ÷ Coverage" },
-              { id: "reinforcement", label: t("calcTypes.reinforcement"), sub: "BBS (d²/162)" },
-              { id: "road_layers", label: t("calcTypes.road_layers"), sub: "Compacted & Loose" },
-              { id: "road_cross_sections", label: t("calcTypes.road_cross_sections"), sub: "Average End Area" },
-            ].map((f) => {
-              const active = formulaType === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFormulaType(f.id as FormulaType)}
-                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all ${
-                    active
-                      ? "border-anumaan-gold-500 bg-anumaan-gold-50/70 text-anumaan-charcoal-900 shadow-xs"
-                      : "border-anumaan-border bg-white text-anumaan-charcoal-600 hover:bg-anumaan-beige-50"
-                  }`}
-                >
-                  <span className="text-xs font-semibold">{f.label}</span>
-                  <span className="text-[10px] text-anumaan-charcoal-400 mt-0.5">{f.sub}</span>
-                </button>
-              );
-            })}
-          </div>
+      <div className="space-y-5 font-devanagari text-xs">
+        {/* Category Switcher Tabs: Basic vs Civil Engineering */}
+        <div className="flex border-b border-[#DCE4EE]">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("basic");
+              if (!["length", "area", "volume", "wall_area", "count", "weight", "time", "lump_sum"].includes(formulaType)) {
+                setFormulaType("area");
+              }
+            }}
+            className={`pb-2.5 px-4 font-bold text-xs border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "basic"
+                ? "border-[#F7931E] text-[#102F57]"
+                : "border-transparent text-[#64748B] hover:text-[#102F57]"
+            }`}
+          >
+            <Ruler className="w-3.5 h-3.5 text-[#F7931E]" />
+            <span>1. Basic Measurements (L, W, H, Wall Area, Count)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("engineering");
+              if (["length", "area", "volume", "wall_area", "count", "weight", "time", "lump_sum"].includes(formulaType)) {
+                setFormulaType("excavation");
+              }
+            }}
+            className={`pb-2.5 px-4 font-bold text-xs border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === "engineering"
+                ? "border-[#F7931E] text-[#102F57]"
+                : "border-transparent text-[#64748B] hover:text-[#102F57]"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-[#102F57]" />
+            <span>2. Civil Engineering Standards (IS 1200 / MoRTH)</span>
+          </button>
         </div>
 
-        {/* Measurement Dimensions Form */}
-        <div className="p-4 bg-anumaan-beige-50/60 rounded-xl border border-anumaan-border space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-anumaan-border-light">
-            <span className="text-xs font-semibold text-anumaan-charcoal-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Ruler className="w-3.5 h-3.5 text-anumaan-gold-600" />
-              {t("estimates.dimensions_and_params")}
-            </span>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-anumaan-charcoal-500">{t("estimates.unit_label")}</label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="text-xs font-medium border border-anumaan-border rounded-md px-2 py-1 bg-white text-anumaan-charcoal-800"
-              >
-                <option value="m">{t("estimates.metres_m")}</option>
-                <option value="ft">{t("estimates.feet_ft")}</option>
-              </select>
+        {/* Formula Selection Cards */}
+        {activeTab === "basic" ? (
+          <div>
+            <label className="block text-[11px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Select Measurement Formula:
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { id: "length", label: "Length", formula: "Q = Length", icon: Ruler },
+                { id: "area", label: "Area (L × W)", formula: "Q = L × W", icon: Square },
+                { id: "volume", label: "Volume (L × W × H)", formula: "Q = L × W × H", icon: Box },
+                { id: "wall_area", label: "Net Wall Area", formula: "Gross - Openings", icon: Layers },
+                { id: "count", label: "Unit Count", formula: "Q = Nos / Pieces", icon: Hash },
+                { id: "weight", label: "Weight", formula: "Q = kg / Tonnes", icon: Scale },
+                { id: "time", label: "Time / Duration", formula: "Q = Hours / Days", icon: Clock },
+                { id: "lump_sum", label: "Lump Sum", formula: "Fixed Scope (ls)", icon: Info },
+              ].map((f) => {
+                const active = formulaType === f.id;
+                const Icon = f.icon;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFormulaType(f.id as FormulaType)}
+                    className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                      active
+                        ? "border-[#F7931E] bg-[#FFF6EB] text-[#102F57] shadow-2xs"
+                        : "border-[#DCE4EE] bg-white text-[#263445] hover:bg-[#F3F6FA]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-[#102F57]">
+                      <Icon className={`w-3.5 h-3.5 ${active ? "text-[#F7931E]" : "text-[#64748B]"}`} />
+                      <span>{f.label}</span>
+                    </div>
+                    <span className="text-[10px] text-[#64748B] mt-0.5">{f.formula}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
+        ) : (
+          <div>
+            <label className="block text-[11px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+              Select IS 1200 / MoRTH Standard:
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { id: "excavation", label: t("calcTypes.excavation"), sub: "IS 1200 Pt 1" },
+                { id: "concrete", label: t("calcTypes.concrete"), sub: "IS 1200 Pt 2" },
+                { id: "slab_concrete", label: t("calcTypes.slab_concrete"), sub: "Plan Area × T" },
+                { id: "brickwork", label: t("calcTypes.brickwork"), sub: "IS 1200 Pt 3" },
+                { id: "plaster", label: t("calcTypes.plaster"), sub: "IS 1200 Pt 12" },
+                { id: "flooring", label: t("calcTypes.flooring"), sub: "IS 1200 Pt 11" },
+                { id: "painting", label: t("calcTypes.painting"), sub: "IS 1200 Pt 13" },
+                { id: "reinforcement", label: t("calcTypes.reinforcement"), sub: "IS 1786 BBS" },
+                { id: "road_layers", label: t("calcTypes.road_layers"), sub: "MoRTH Sec 400" },
+                { id: "road_cross_sections", label: t("calcTypes.road_cross_sections"), sub: "Avg End Area" },
+              ].map((f) => {
+                const active = formulaType === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFormulaType(f.id as FormulaType)}
+                    className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                      active
+                        ? "border-[#102F57] bg-[#EEF3F9] text-[#102F57] shadow-2xs font-bold"
+                        : "border-[#DCE4EE] bg-white text-[#263445] hover:bg-[#F3F6FA]"
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{f.label}</span>
+                    <span className="text-[10px] text-[#64748B] mt-0.5">{f.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-          {/* Conditional Input Rows */}
-          {["excavation", "concrete", "brickwork", "plaster", "flooring", "road_layers"].includes(formulaType) && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {/* Input Dimensions Panel */}
+        <div className="p-3.5 bg-stone-50/80 rounded-xl border border-stone-200/80 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-stone-200">
+            <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <Ruler className="w-3.5 h-3.5 text-amber-600" />
+              <span>Enter Actual Dimensions</span>
+            </span>
+
+            {/* Applicable Unit Selector */}
+            {["length", "area", "volume", "wall_area", "excavation", "concrete", "brickwork", "plaster", "flooring", "road_layers"].includes(formulaType) && (
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] text-stone-600 font-medium">Unit:</label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="px-2 py-0.5 text-xs font-medium border border-stone-300 rounded bg-white"
+                >
+                  <option value="m">Metres (m / m² / m³)</option>
+                  <option value="ft">Feet (ft / ft² / ft³)</option>
+                </select>
+              </div>
+            )}
+
+            {formulaType === "count" && (
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] text-stone-600 font-medium">Unit:</label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="px-2 py-0.5 text-xs font-medium border border-stone-300 rounded bg-white"
+                >
+                  <option value="nos">nos (Numbers)</option>
+                  <option value="piece">piece (Pieces)</option>
+                </select>
+              </div>
+            )}
+
+            {formulaType === "weight" && (
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] text-stone-600 font-medium">Unit:</label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="px-2 py-0.5 text-xs font-medium border border-stone-300 rounded bg-white"
+                >
+                  <option value="kg">kg (Kilograms)</option>
+                  <option value="tonne">tonne (Metric Tonnes)</option>
+                </select>
+              </div>
+            )}
+
+            {formulaType === "time" && (
+              <div className="flex items-center gap-1.5">
+                <label className="text-[11px] text-stone-600 font-medium">Unit:</label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="px-2 py-0.5 text-xs font-medium border border-stone-300 rounded bg-white"
+                >
+                  <option value="hour">hour (Hours)</option>
+                  <option value="day">day (Days)</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Conditional Inputs */}
+          {/* 1. Length */}
+          {formulaType === "length" && (
+            <div>
+              <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                Length ({unit}) *
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.001"
+                value={length}
+                onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+              />
+            </div>
+          )}
+
+          {/* 2. Area (L × W) */}
+          {formulaType === "area" && (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                  {t("estimates.length")} ({unit})
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                  Length ({unit}) *
                 </label>
                 <input
                   type="number"
                   step="any"
+                  min="0.001"
                   value={length}
                   onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
-                  className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900 focus:outline-hidden focus:ring-1 focus:ring-anumaan-gold-500"
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
-
-              {["excavation", "concrete", "flooring", "road_layers"].includes(formulaType) && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.width")} ({unit})
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={width}
-                    onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900 focus:outline-hidden focus:ring-1 focus:ring-anumaan-gold-500"
-                  />
-                </div>
-              )}
-
-              {formulaType === "excavation" && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.depth")} ({unit})
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={depth}
-                    onChange={(e) => setDepth(parseFloat(e.target.value) || 0)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900 focus:outline-hidden focus:ring-1 focus:ring-anumaan-gold-500"
-                  />
-                </div>
-              )}
-
-              {["brickwork", "plaster"].includes(formulaType) && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.height")} ({unit})
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={height}
-                    onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900 focus:outline-hidden focus:ring-1 focus:ring-anumaan-gold-500"
-                  />
-                </div>
-              )}
-
-              {["concrete", "brickwork", "road_layers"].includes(formulaType) && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.thickness")} ({unit})
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={thickness}
-                    onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900 focus:outline-hidden focus:ring-1 focus:ring-anumaan-gold-500"
-                  />
-                </div>
-              )}
-
-              {formulaType === "plaster" && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.faces_sides")}
-                  </label>
-                  <select
-                    value={sides}
-                    onChange={(e) => setSides(parseInt(e.target.value) || 1)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
-                  >
-                    <option value={1}>{t("estimates.single_face")}</option>
-                    <option value={2}>{t("estimates.both_faces")}</option>
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Slab Concrete / Painting Inputs */}
-          {["slab_concrete", "painting"].includes(formulaType) && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                  {t("estimates.area")} ({unit === "m" ? "sqm" : "sqft"})
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                  Width ({unit}) *
                 </label>
                 <input
                   type="number"
                   step="any"
-                  value={area}
-                  onChange={(e) => setArea(parseFloat(e.target.value) || 0)}
-                  className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
+                  min="0.001"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
-
-              {formulaType === "slab_concrete" && (
-                <div>
-                  <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                    {t("estimates.thickness")} ({unit})
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={thickness}
-                    onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
-                    className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
-                  />
-                </div>
-              )}
-
-              {formulaType === "painting" && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                      {t("estimates.coats")}
-                    </label>
-                    <input
-                      type="number"
-                      value={coats}
-                      onChange={(e) => setCoats(parseInt(e.target.value) || 1)}
-                      className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                      {t("estimates.coverage")} (sqm/L)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={coverage}
-                      onChange={(e) => setCoverage(parseFloat(e.target.value) || 1)}
-                      className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
-                    />
-                  </div>
-                </>
-              )}
             </div>
           )}
 
-          {/* Road Cross-Sections Inputs */}
-          {formulaType === "road_cross_sections" && (
+          {/* 3. Volume (L × W × H) */}
+          {formulaType === "volume" && (
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                  {t("estimates.section1_area")} ({unit === "m" ? "sqm" : "sqft"})
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                  Length ({unit}) *
                 </label>
                 <input
                   type="number"
                   step="any"
-                  value={area1}
-                  onChange={(e) => setArea1(parseFloat(e.target.value) || 0)}
-                  className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
+                  min="0.001"
+                  value={length}
+                  onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                  {t("estimates.section2_area")} ({unit === "m" ? "sqm" : "sqft"})
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                  Width ({unit}) *
                 </label>
                 <input
                   type="number"
                   step="any"
-                  value={area2}
-                  onChange={(e) => setArea2(parseFloat(e.target.value) || 0)}
-                  className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
+                  min="0.001"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-anumaan-charcoal-600 mb-1">
-                  {t("estimates.distance")} ({unit})
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                  Height ({unit}) *
                 </label>
                 <input
                   type="number"
                   step="any"
-                  value={distance}
-                  onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
-                  className="w-full text-sm border border-anumaan-border rounded-lg px-3 py-1.5 bg-white text-anumaan-charcoal-900"
+                  min="0.001"
+                  value={height}
+                  onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
             </div>
           )}
 
-          {/* Reinforcement BBS Table */}
-          {formulaType === "reinforcement" && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-anumaan-charcoal-700">{t("estimates.bar_schedule_items")}</span>
-                <button
-                  type="button"
-                  onClick={handleAddBar}
-                  className="text-xs text-anumaan-gold-700 hover:text-anumaan-gold-600 font-semibold flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> {t("estimates.add_bar")}
-                </button>
+          {/* 4. Rectangular Wall Area with Opening Deductions */}
+          {formulaType === "wall_area" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                    Wall Length ({unit}) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.001"
+                    value={length}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                    Wall Height ({unit}) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.001"
+                    value={height}
+                    onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                {bars.map((b, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-anumaan-border">
+
+              {/* Openings (Doors & Windows) */}
+              <div className="p-3 bg-white rounded-lg border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-stone-800">
+                    Door & Window Openings to Deduct:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddOpening}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Opening</span>
+                  </button>
+                </div>
+
+                {openings.map((op, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
                     <input
                       type="text"
-                      placeholder={t("estimates.bar_tag")}
-                      value={b.description || ""}
+                      placeholder="e.g. Door D1"
+                      value={op.description}
                       onChange={(e) => {
-                        const copy = [...bars];
-                        copy[idx].description = e.target.value;
-                        setBars(copy);
+                        const updated = [...openings];
+                        updated[idx].description = e.target.value;
+                        setOpenings(updated);
                       }}
-                      className="text-xs border border-anumaan-border rounded px-2 py-1 w-28 text-anumaan-charcoal-900"
+                      className="flex-1 px-2 py-1 text-xs border border-stone-300 rounded"
                     />
-                    <select
-                      value={b.diameter_mm}
-                      onChange={(e) => {
-                        const copy = [...bars];
-                        copy[idx].diameter_mm = parseInt(e.target.value);
-                        setBars(copy);
-                      }}
-                      className="text-xs border border-anumaan-border rounded px-2 py-1 bg-white text-anumaan-charcoal-900 font-medium"
-                    >
-                      {[8, 10, 12, 16, 20, 25, 32].map((dia) => (
-                        <option key={dia} value={dia}>
-                          {dia} mm ({((dia * dia) / 162).toFixed(3)} kg/m)
-                        </option>
-                      ))}
-                    </select>
                     <input
                       type="number"
                       step="any"
-                      placeholder={`${t("estimates.length")} (m)`}
-                      value={b.length}
+                      placeholder={`W (${unit})`}
+                      value={op.length}
                       onChange={(e) => {
-                        const copy = [...bars];
-                        copy[idx].length = parseFloat(e.target.value) || 0;
-                        setBars(copy);
+                        const updated = [...openings];
+                        updated[idx].length = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
                       }}
-                      className="text-xs border border-anumaan-border rounded px-2 py-1 w-20 text-anumaan-charcoal-900"
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
                     />
                     <input
                       type="number"
-                      placeholder={t("estimates.count")}
-                      value={b.count || 1}
+                      step="any"
+                      placeholder={`H (${unit})`}
+                      value={op.height}
                       onChange={(e) => {
-                        const copy = [...bars];
-                        copy[idx].count = parseInt(e.target.value) || 1;
-                        setBars(copy);
+                        const updated = [...openings];
+                        updated[idx].height = parseFloat(e.target.value) || 0;
+                        setOpenings(updated);
                       }}
-                      className="text-xs border border-anumaan-border rounded px-2 py-1 w-16 text-anumaan-charcoal-900"
+                      className="w-16 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
                     />
-                    {bars.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBar(idx)}
-                        className="p-1 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Qty"
+                      value={op.count || 1}
+                      onChange={(e) => {
+                        const updated = [...openings];
+                        updated[idx].count = parseInt(e.target.value) || 1;
+                        setOpenings(updated);
+                      }}
+                      className="w-12 px-2 py-1 text-xs border border-stone-300 rounded font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOpening(idx)}
+                      className="text-stone-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Openings Section for Brickwork & Plaster */}
-          {["brickwork", "plaster"].includes(formulaType) && (
-            <div className="pt-2 border-t border-anumaan-border-light space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-anumaan-charcoal-700">
-                  {t("estimates.openings")}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAddOpening}
-                  className="text-xs text-anumaan-gold-700 hover:text-anumaan-gold-600 font-semibold flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> {t("estimates.add_opening")}
-                </button>
-              </div>
-
-              {openings.map((op, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-anumaan-border">
-                  <input
-                    type="text"
-                    placeholder={t("estimates.opening_desc_placeholder")}
-                    value={op.description || ""}
-                    onChange={(e) => {
-                      const copy = [...openings];
-                      copy[idx].description = e.target.value;
-                      setOpenings(copy);
-                    }}
-                    className="text-xs border border-anumaan-border rounded px-2 py-1 w-32 text-anumaan-charcoal-900"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder={t("estimates.length")}
-                    value={op.length}
-                    onChange={(e) => {
-                      const copy = [...openings];
-                      copy[idx].length = parseFloat(e.target.value) || 0;
-                      setOpenings(copy);
-                    }}
-                    className="text-xs border border-anumaan-border rounded px-2 py-1 w-20 text-anumaan-charcoal-900"
-                  />
-                  <span className="text-xs text-anumaan-charcoal-400">×</span>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder={t("estimates.height")}
-                    value={op.height}
-                    onChange={(e) => {
-                      const copy = [...openings];
-                      copy[idx].height = parseFloat(e.target.value) || 0;
-                      setOpenings(copy);
-                    }}
-                    className="text-xs border border-anumaan-border rounded px-2 py-1 w-20 text-anumaan-charcoal-900"
-                  />
-                  <span className="text-xs text-anumaan-charcoal-400">{t("estimates.qty_short")}</span>
-                  <input
-                    type="number"
-                    placeholder={t("estimates.count")}
-                    value={op.count || 1}
-                    onChange={(e) => {
-                      const copy = [...openings];
-                      copy[idx].count = parseInt(e.target.value) || 1;
-                      setOpenings(copy);
-                    }}
-                    className="text-xs border border-anumaan-border rounded px-2 py-1 w-16 text-anumaan-charcoal-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveOpening(idx)}
-                    className="p-1 text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+          {/* 5. Count */}
+          {formulaType === "count" && (
+            <div>
+              <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                Quantity Count ({unit}) *
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={countVal}
+                onChange={(e) => setCountVal(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+              />
             </div>
           )}
 
-          {/* Configurable Wastage / Factors */}
-          <div className="flex items-center gap-4 pt-2 text-xs text-anumaan-charcoal-600">
-            {["concrete", "slab_concrete", "brickwork", "plaster", "flooring", "reinforcement"].includes(formulaType) && (
-              <div className="flex items-center gap-1.5">
-                <span>{t("estimates.wastage")}:</span>
+          {/* 6. Weight */}
+          {formulaType === "weight" && (
+            <div>
+              <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                Material Weight ({unit}) *
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.01"
+                value={weightVal}
+                onChange={(e) => setWeightVal(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+              />
+            </div>
+          )}
+
+          {/* 7. Time */}
+          {formulaType === "time" && (
+            <div>
+              <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                Duration ({unit}) *
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.1"
+                value={timeVal}
+                onChange={(e) => setTimeVal(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+              />
+            </div>
+          )}
+
+          {/* 8. Lump Sum */}
+          {formulaType === "lump_sum" && (
+            <div>
+              <label className="block text-[11px] text-stone-600 font-medium mb-1">
+                Lump Sum Work Scope Description *
+              </label>
+              <input
+                type="text"
+                value={lumpSumDesc}
+                onChange={(e) => setLumpSumDesc(e.target.value)}
+                className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs bg-white"
+              />
+              <p className="text-[10px] text-stone-500 mt-1">
+                Standard quantity is fixed at 1 lump sum item (ls). The unit rate defines the full scope value.
+              </p>
+            </div>
+          )}
+
+          {/* Engineering: Excavation */}
+          {formulaType === "excavation" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Length ({unit})</label>
                 <input
                   type="number"
-                  step="0.5"
-                  value={wastagePct}
-                  onChange={(e) => setWastagePct(parseFloat(e.target.value) || 0)}
-                  className="w-16 border border-anumaan-border rounded px-1.5 py-0.5 bg-white text-anumaan-charcoal-900 font-medium"
+                  step="any"
+                  value={length}
+                  onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
-            )}
-            {formulaType === "excavation" && (
-              <div className="flex items-center gap-1.5">
-                <span>{t("estimates.swell_factor")}:</span>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Width ({unit})</label>
                 <input
                   type="number"
-                  step="0.05"
-                  value={swellFactor}
-                  onChange={(e) => setSwellFactor(parseFloat(e.target.value) || 0)}
-                  className="w-16 border border-anumaan-border rounded px-1.5 py-0.5 bg-white text-anumaan-charcoal-900 font-medium"
+                  step="any"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
                 />
               </div>
-            )}
-          </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Depth ({unit})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={depth}
+                  onChange={(e) => setDepth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Concrete */}
+          {formulaType === "concrete" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Length ({unit})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={length}
+                  onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Width ({unit})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={width}
+                  onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Thickness ({unit})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={thickness}
+                  onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Engineering: Slab Concrete */}
+          {formulaType === "slab_concrete" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Plan Area (sqm)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={area}
+                  onChange={(e) => setArea(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-stone-600 font-medium mb-1">Slab Thickness ({unit})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={thickness}
+                  onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-mono bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Live Calculation Output Card */}
-        {result && (
-          <div className="p-4 rounded-xl bg-gradient-to-r from-anumaan-beige-100 to-anumaan-gold-50/50 border border-anumaan-border shadow-xs space-y-3">
+        {/* Calculation Result Banner */}
+        {calcError ? (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+            {calcError}
+          </div>
+        ) : result ? (
+          <div className="p-4 bg-[#EEF3F9] border border-[#DCE4EE] rounded-xl space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-anumaan-gold-700 uppercase tracking-wider block">
-                  {t("estimates.deterministic_quantity")}
-                </span>
-                <div className="text-2xl font-bold text-anumaan-charcoal-900 mt-0.5">
-                  {result.quantity.toLocaleString("en-IN", { maximumFractionDigits: 4 })}{" "}
-                  <span className="text-base font-medium text-anumaan-charcoal-600">{result.unit}</span>
+                <div className="text-[11px] font-semibold text-[#102F57] uppercase tracking-wider">
+                  Approved Calculated Quantity
+                </div>
+                <div className="text-xl font-bold font-mono text-[#102F57] flex items-baseline gap-1 mt-0.5">
+                  <span>{result.quantity}</span>
+                  <span className="text-xs font-medium text-[#64748B]">{result.unit}</span>
                 </div>
               </div>
 
-              {/* Conversion badges */}
-              <div className="text-right space-y-1">
-                {result.standard_reference && (
-                  <span className="inline-block text-[10px] font-semibold text-anumaan-charcoal-500 bg-white/80 px-2 py-0.5 rounded border border-anumaan-border">
+              {result.standard_reference && (
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-[#102F57] border border-[#DCE4EE]">
                     {result.standard_reference}
                   </span>
-                )}
-                {result.breakdown?.litres_required !== undefined && (
-                  <div className="inline-block px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-50 border border-blue-200 text-blue-700 shadow-2xs">
-                    {result.breakdown.litres_required.toFixed(2)} {t("estimates.litres_required")}
-                  </div>
-                )}
-                {result.brass_equivalent !== undefined && (
-                  <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded-md bg-white border border-anumaan-gold-500/40 text-anumaan-gold-700 shadow-2xs">
-                    {result.brass_equivalent.toFixed(2)} {t("estimates.brass_equivalent_label")}
-                  </span>
-                )}
-                {result.breakdown?.loose_volume_cum !== undefined && (
-                  <div className="text-[11px] text-anumaan-charcoal-500">
-                    {t("estimates.loose_vol_label")} {result.breakdown.loose_volume_cum.toFixed(2)} {t("units.cum")}
-                  </div>
-                )}
-                {result.breakdown?.sqft_equivalent !== undefined && (
-                  <span className="inline-block px-2 py-0.5 text-xs rounded-md bg-white border border-anumaan-border text-anumaan-charcoal-700">
-                    {result.breakdown.sqft_equivalent.toFixed(1)} {t("estimates.sqft_label")}
-                  </span>
-                )}
-                {result.breakdown?.tonnes !== undefined && (
-                  <span className="inline-block px-2 py-0.5 text-xs rounded-md bg-white border border-anumaan-border text-anumaan-charcoal-700">
-                    {result.breakdown.tonnes.toFixed(3)} {t("estimates.metric_tonnes_label")}
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            <div className="pt-2 border-t border-anumaan-border-light text-xs text-anumaan-charcoal-700 font-mono bg-white/70 p-2.5 rounded-lg">
-              <span className="font-semibold text-anumaan-charcoal-900">{t("estimates.formula_breakdown_heading")}: </span>
-              {result.formula}
+            <div className="pt-2 border-t border-[#DCE4EE] text-xs font-mono text-[#263445]">
+              <span className="font-semibold text-[#102F57]">Formula: </span>
+              <span>{result.formula}</span>
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* Modal Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-anumaan-border-light">
+        {/* Modal Actions */}
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#DCE4EE]">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium rounded-lg border border-anumaan-border bg-white text-anumaan-charcoal-700 hover:bg-anumaan-beige-50 transition-colors"
+            className="btn-secondary px-4 py-2 rounded-lg text-xs"
           >
             {t("common.cancel")}
           </button>
           <button
             type="button"
+            disabled={!result}
             onClick={handleApply}
-            disabled={!result || result.quantity <= 0}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-anumaan-gold-600 text-white hover:bg-anumaan-gold-700 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            className="btn-primary px-5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             <Check className="w-3.5 h-3.5" />
-            {t("estimates.apply_calculation")}
+            <span>Apply to BOQ Item</span>
           </button>
         </div>
       </div>

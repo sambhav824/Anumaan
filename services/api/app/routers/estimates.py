@@ -26,6 +26,14 @@ from app.schemas.estimate import (
     CalculationRequest,
 )
 from app.core.calculations import (
+    calculate_length,
+    calculate_area,
+    calculate_volume,
+    calculate_wall_area,
+    calculate_count,
+    calculate_weight,
+    calculate_time,
+    calculate_lump_sum,
     calculate_excavation,
     calculate_concrete,
     calculate_slab_concrete,
@@ -37,6 +45,8 @@ from app.core.calculations import (
     calculate_road_layers,
     calculate_road_cross_sections,
     calculate_estimate_totals,
+    calculate_quick_building_estimate,
+    calculate_boundary_wall_quantities,
     quantize_currency,
     quantize_qty,
 )
@@ -288,6 +298,7 @@ async def create_estimate(
             boq = BOQItem(
                 organization_id=organization_id,
                 estimate_id=new_est.id,
+                rate_item_id=item_in.rate_item_id,
                 item_number=item_in.item_number,
                 description=item_in.description,
                 category=item_in.category,
@@ -501,6 +512,7 @@ async def add_boq_item(
     new_item = BOQItem(
         organization_id=organization_id,
         estimate_id=estimate_id,
+        rate_item_id=item_in.rate_item_id,
         item_number=item_in.item_number,
         description=item_in.description,
         category=item_in.category,
@@ -561,6 +573,7 @@ async def save_boq_items(
             boq = BOQItem(
                 organization_id=organization_id,
                 estimate_id=estimate_id,
+                rate_item_id=item_in.rate_item_id,
                 item_number=item_in.item_number,
                 description=item_in.description,
                 category=item_in.category,
@@ -661,7 +674,52 @@ async def live_calculate(
     input_unit = p.get("input_unit") or p.get("unit") or "m"
 
     try:
-        if ctype == "excavation":
+        if ctype == "length":
+            return calculate_length(
+                length=p["length"],
+                unit=input_unit,
+            )
+        elif ctype == "area":
+            return calculate_area(
+                length=p["length"],
+                width=p["width"],
+                unit=input_unit,
+            )
+        elif ctype == "volume":
+            return calculate_volume(
+                length=p["length"],
+                width=p["width"],
+                height=p.get("height") or p.get("depth", 0),
+                unit=input_unit,
+            )
+        elif ctype in ("wall_area", "rectangular_wall_area"):
+            return calculate_wall_area(
+                length=p["length"],
+                height=p["height"],
+                openings=p.get("openings"),
+                unit=input_unit,
+            )
+        elif ctype == "count":
+            return calculate_count(
+                count=p.get("count") or p.get("quantity", 0),
+                unit=p.get("unit", "nos"),
+            )
+        elif ctype == "weight":
+            return calculate_weight(
+                weight=p.get("weight") or p.get("quantity", 0),
+                unit=p.get("unit", "kg"),
+            )
+        elif ctype == "time":
+            return calculate_time(
+                time_val=p.get("time") or p.get("duration") or p.get("quantity", 0),
+                unit=p.get("unit", "day"),
+            )
+        elif ctype == "lump_sum":
+            return calculate_lump_sum(
+                amount=p.get("amount") or p.get("quantity", 1),
+                description=p.get("description", "Lump Sum Work"),
+            )
+        elif ctype == "excavation":
             return calculate_excavation(
                 length=p["length"],
                 width=p["width"],
@@ -755,6 +813,26 @@ async def live_calculate(
                 distance=distance,
                 area_unit=p.get("area_unit", "sqm"),
                 distance_unit=p.get("distance_unit", "m"),
+            )
+        elif ctype in ("quick_building", "quick_estimate"):
+            return calculate_quick_building_estimate(
+                built_up_area_sqft=p.get("built_up_area_sqft") or p.get("area", 1000),
+                floors=int(p.get("floors", 1)),
+                quality_tier=p.get("quality_tier", "standard"),
+                region_id=p.get("region_id", "national_cpwd"),
+            )
+        elif ctype in ("boundary_wall", "wall"):
+            return calculate_boundary_wall_quantities(
+                length_m=p["length_m"],
+                height_m=p["height_m"],
+                thickness_mm=p.get("thickness_mm", 230),
+                masonry_type=p.get("masonry_type", "clay_brick"),
+                gate_width_m=p.get("gate_width_m", 0),
+                gate_height_m=p.get("gate_height_m", 0),
+                foundation_depth_m=p.get("foundation_depth_m", 0.8),
+                coping_thickness_mm=p.get("coping_thickness_mm", 75),
+                include_plaster=p.get("include_plaster", True),
+                include_paint=p.get("include_paint", True),
             )
         else:
             raise HTTPException(

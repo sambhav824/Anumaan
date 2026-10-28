@@ -2,59 +2,65 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslation } from "../context/I18nContext";
 
 interface LogoProps {
   showTagline?: boolean;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  href?: string;
 }
 
-export function Logo({ showTagline = true, className = "", size = "md" }: LogoProps) {
-  const { t, locale } = useTranslation();
+export function Logo({
+  showTagline = false,
+  className = "",
+  size = "md",
+  href = "/dashboard",
+}: LogoProps) {
+  const { t } = useTranslation();
+
+  const dimensions = {
+    sm: { width: 76, height: 38 },
+    md: { width: 92, height: 46 },
+    lg: { width: 130, height: 65 },
+    xl: { width: 180, height: 90 },
+  }[size];
 
   return (
-    <Link href="/dashboard" className={`inline-flex items-center gap-3 group ${className}`}>
-      {/* Architectural Ruler / Cadastral Outline Glyph */}
-      <div className="relative flex items-center justify-center w-10 h-10 rounded-lg bg-anumaan-charcoal-900 border border-anumaan-gold-500/30 text-anumaan-gold-500 shadow-sm transition-transform duration-200 group-hover:scale-105">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-5 h-5"
-        >
-          {/* Architectural Drafting Square & Ruler Markings */}
-          <path d="M3 3v18h18" />
-          <path d="M3 7h3" />
-          <path d="M3 11h2" />
-          <path d="M3 15h3" />
-          <path d="M3 19h2" />
-          <path d="M7 21v-3" />
-          <path d="M11 21v-2" />
-          <path d="M15 21v-3" />
-          <path d="M19 21v-2" />
-          <path d="M7 7l12 12" strokeDasharray="2 2" opacity="0.6" />
-        </svg>
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-2.5 group transition-opacity hover:opacity-95 ${className}`}
+    >
+      <div className="relative flex items-center justify-center bg-white rounded-lg p-0.5 shadow-2xs">
+        <Image
+          src="/assets/anumaan-logo.png"
+          alt="अनुमान — ANUMAAN"
+          width={dimensions.width}
+          height={dimensions.height}
+          priority
+          className="object-contain h-auto w-auto transition-transform duration-200 group-hover:scale-[1.02]"
+          style={{ maxHeight: `${dimensions.height}px`, width: "auto" }}
+        />
       </div>
 
-      <div className="flex flex-col">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-devanagari font-bold text-xl tracking-tight text-anumaan-charcoal-900">
-            अनुमान
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-anumaan-gold-600 font-sans">
-            Anumaan
+      {showTagline ? (
+        <div className="hidden sm:flex flex-col border-l border-[#DCE4EE] pl-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#102F57] tracking-tight font-devanagari">
+              अनुमान
+            </span>
+            <span className="text-[11px] font-semibold text-[#F7931E] tracking-tight font-sans">
+              Anumaan
+            </span>
+          </div>
+          <span className="text-[11px] font-medium text-[#64748B] font-devanagari">
+            {t("brand.tagline") || "मिनटों में पूरा अनुमान।"}
           </span>
         </div>
-        {showTagline && (
-          <span className="text-[11px] font-medium text-anumaan-charcoal-500 font-devanagari">
-            {t("brand.tagline")}
-          </span>
-        )}
-      </div>
+      ) : (
+        <span className="sr-only">अनुमान Anumaan</span>
+      )}
     </Link>
   );
 }

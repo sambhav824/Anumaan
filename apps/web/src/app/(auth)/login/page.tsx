@@ -44,27 +44,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-anumaan-beige-50">
+    <div className="min-h-screen flex flex-col bg-[#F3F6FA]">
       {/* Top Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b border-anumaan-border-light bg-white/80 backdrop-blur-xs">
-        <Logo showTagline={true} />
+      <header className="px-6 py-3.5 flex items-center justify-between border-b border-[#DCE4EE] bg-white">
+        <Logo showTagline={true} size="md" href="/login" />
         <LanguageSelector variant="header" />
       </header>
 
       {/* Main Login Card */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-anumaan-border p-8">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#DCE4EE] p-8">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-anumaan-charcoal-900 font-devanagari">
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" showTagline={false} href="/login" />
+            </div>
+            <h1 className="text-2xl font-bold text-[#102F57] font-devanagari">
               {t("auth.loginTitle")}
             </h1>
-            <p className="text-sm text-anumaan-charcoal-500 font-devanagari mt-1">
+            <p className="text-sm text-[#64748B] font-devanagari mt-1">
               {t("auth.loginSubtitle")}
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-sm text-red-700 font-devanagari">
+            <div className="mb-4 p-3.5 bg-[#FDF2F2] border border-[#F8B4B4] rounded-xl flex items-start gap-2 text-sm text-[#C62828] font-devanagari">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -72,35 +75,35 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1.5 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1.5 font-devanagari">
                 {t("auth.emailLabel") || t("auth.email")}
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-anumaan-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t("auth.emailPlaceholder") || "engineer@company.com"}
-                  className="w-full pl-9 pr-3.5 py-2.5 border border-anumaan-border rounded-lg text-sm text-anumaan-charcoal-900 focus:outline-hidden focus:ring-2 focus:ring-anumaan-gold-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-[#DCE4EE] rounded-lg text-sm text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1.5 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1.5 font-devanagari">
                 {t("auth.passwordLabel") || t("auth.password")}
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-anumaan-charcoal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t("auth.passwordPlaceholder") || "••••••••"}
-                  className="w-full pl-9 pr-3.5 py-2.5 border border-anumaan-border rounded-lg text-sm text-anumaan-charcoal-900 focus:outline-hidden focus:ring-2 focus:ring-anumaan-gold-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 border border-[#DCE4EE] rounded-lg text-sm text-[#263445] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#102F57]/15 focus:border-[#102F57]"
                 />
               </div>
             </div>
@@ -108,7 +111,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 flex items-center justify-center gap-2 px-5 py-2.5 bg-anumaan-gold-600 hover:bg-anumaan-gold-700 disabled:opacity-50 text-white font-medium rounded-lg shadow-xs transition-colors font-devanagari"
+              className="w-full mt-2 flex items-center justify-center gap-2 px-5 py-2.5 bg-[#102F57] hover:bg-[#0B2240] text-white font-semibold rounded-lg shadow-xs transition-colors focus:ring-2 focus:ring-[#102F57]/30 disabled:opacity-50 font-devanagari"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -121,9 +124,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-anumaan-charcoal-500 font-devanagari">
+          <div className="mt-6 text-center text-xs text-[#64748B] font-devanagari">
             {t("auth.needAccount")}{" "}
-            <Link href="/signup" className="text-anumaan-gold-700 hover:underline font-semibold font-devanagari">
+            <Link href="/signup" className="text-[#102F57] hover:text-[#F7931E] hover:underline font-semibold font-devanagari">
               {t("auth.createAccount") || t("auth.signUpButton")}
             </Link>
           </div>

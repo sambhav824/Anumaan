@@ -260,7 +260,7 @@ async def test_complete_12_step_business_workflow(client: AsyncClient, token_a: 
     assert quote["language"] == "mr"
     assert quote["tax_configured"] is False
     assert float(quote["tax_amount"]) == 0.0
-    assert float(quote["total_amount"]) == 379500.0  # Taxable amount when tax unconfigured
+    assert float(quote["total_amount"]) == 386400.0  # Taxable amount when tax unconfigured (no discount)
 
     # =========================================================================
     # Step 10: Preview, Edit and Issue Quotation
@@ -308,8 +308,8 @@ async def test_complete_12_step_business_workflow(client: AsyncClient, token_a: 
     issued_data = issue_res.json()
     assert issued_data["status"] == "issued"
     assert issued_data["snapshot"] is not None
-    assert float(issued_data["tax_amount"]) == 68310.0
-    assert float(issued_data["total_amount"]) == 447810.0
+    assert float(issued_data["tax_amount"]) == 69552.0
+    assert float(issued_data["total_amount"]) == 455952.0
 
     # =========================================================================
     # Step 11: Download and Validate PDF and Excel Exports
@@ -362,7 +362,7 @@ async def test_complete_12_step_business_workflow(client: AsyncClient, token_a: 
     # Re-fetch quotation and re-download exports -> MUST REMAIN COMPLETELY UNCHANGED
     q_post_edit = await client.get(f"/api/organizations/{org_id}/quotations/{quote_id}", headers=headers_a)
     assert q_post_edit.status_code == 200
-    assert float(q_post_edit.json()["total_amount"]) == 447810.0  # Still 447,810.00, NOT inflated!
+    assert float(q_post_edit.json()["total_amount"]) == 455952.0  # Still 455,952.00, NOT inflated!
     assert len(q_post_edit.json()["items"]) == 2  # Still 2 items, NOT 3!
 
     # 12c. Valid status update: issued -> accepted

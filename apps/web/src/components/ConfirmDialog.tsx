@@ -35,22 +35,22 @@ export function ConfirmDialog({
       <div className="flex items-start gap-4 mb-6">
         <div
           className={`p-2.5 rounded-full flex-shrink-0 ${
-            isDestructive ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
+            isDestructive ? "bg-[#FDF2F2] text-[#C62828]" : "bg-[#FEF7EB] text-[#B86B08]"
           }`}
         >
           <AlertTriangle className="w-5 h-5" />
         </div>
-        <p className="text-sm text-anumaan-charcoal-700 font-devanagari leading-relaxed">
+        <p className="text-sm text-[#263445] font-devanagari leading-relaxed">
           {message}
         </p>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-anumaan-border-light">
+      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#DCE4EE]">
         <button
           type="button"
           onClick={onClose}
           disabled={loading}
-          className="px-4 py-2 rounded-md border border-anumaan-border text-sm font-medium text-anumaan-charcoal-700 hover:bg-anumaan-beige-50 transition-colors font-devanagari"
+          className="btn-secondary font-devanagari"
         >
           {cancelLabel || t("common.cancel")}
         </button>
@@ -58,11 +58,7 @@ export function ConfirmDialog({
           type="button"
           onClick={onConfirm}
           disabled={loading}
-          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors font-devanagari ${
-            isDestructive
-              ? "bg-red-600 hover:bg-red-700"
-              : "bg-anumaan-charcoal-900 hover:bg-anumaan-charcoal-800"
-          }`}
+          className={`${isDestructive ? "btn-destructive" : "btn-primary"} font-devanagari`}
         >
           {loading ? t("common.loading") : confirmLabel || t("common.confirm")}
         </button>

@@ -76,50 +76,50 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 max-w-4xl animate-in fade-in duration-150">
       {/* Top Banner */}
-      <div className="pb-4 border-b border-anumaan-border-light">
-        <h1 className="text-2xl font-bold text-anumaan-charcoal-900 font-devanagari">
+      <div className="pb-4 border-b border-[#DCE4EE]">
+        <h1 className="text-2xl font-bold text-[#102F57] font-heading">
           {t("settings.title")}
         </h1>
-        <p className="text-sm text-anumaan-charcoal-500 font-devanagari mt-1">
+        <p className="text-sm text-[#64748B] mt-1">
           {t("settings.subtitle")}
         </p>
       </div>
 
       {/* 1. Language Preference Section */}
-      <div className="p-6 rounded-xl bg-white border border-anumaan-border shadow-xs space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-anumaan-border-light">
-          <Globe className="w-5 h-5 text-anumaan-gold-600" />
-          <h2 className="text-base font-semibold text-anumaan-charcoal-900 font-devanagari">
+      <div className="p-6 rounded-xl bg-white border border-[#DCE4EE] shadow-sm space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-[#DCE4EE]">
+          <Globe className="w-5 h-5 text-[#F7931E]" />
+          <h2 className="text-base font-semibold text-[#102F57] font-heading">
             {t("settings.languagePreferences")}
           </h2>
         </div>
-        <p className="text-sm text-anumaan-charcoal-600 font-devanagari">
+        <p className="text-sm text-[#64748B]">
           {t("settings.languageDescription")}
         </p>
         <LanguageSelector variant="settings" />
-        <p className="text-xs text-anumaan-charcoal-400 font-devanagari italic pt-1">
+        <p className="text-xs text-[#64748B] italic pt-1">
           {t("settings.quotationLanguageNotice")}
         </p>
       </div>
 
       {/* 2. Company Profile Section */}
-      <div className="p-6 rounded-xl bg-white border border-anumaan-border shadow-xs space-y-6">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-anumaan-border-light">
-          <Building2 className="w-5 h-5 text-anumaan-gold-600" />
-          <h2 className="text-base font-semibold text-anumaan-charcoal-900 font-devanagari">
+      <div className="p-6 rounded-xl bg-white border border-[#DCE4EE] shadow-sm space-y-6">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-[#DCE4EE]">
+          <Building2 className="w-5 h-5 text-[#F7931E]" />
+          <h2 className="text-base font-semibold text-[#102F57] font-heading">
             {t("settings.orgDetails")}
           </h2>
         </div>
 
         {success && (
-          <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-sm text-emerald-800 font-devanagari">
-            <CheckCircle className="w-4 h-4 text-emerald-600" />
+          <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-sm text-[#16835D]">
+            <CheckCircle className="w-4 h-4 text-[#16835D]" />
             <span>{t("settings.profileUpdated")}</span>
           </div>
         )}
 
         {error && (
-          <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 font-devanagari">
+          <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-sm text-[#C62828]">
             {error}
           </div>
         )}
@@ -127,8 +127,8 @@ export default function SettingsPage() {
         <form onSubmit={handleSaveCompany} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
-                {t("settings.companyName")} <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
+                {t("settings.companyName")} <span className="text-[#C62828]">*</span>
               </label>
               <input
                 type="text"
@@ -137,12 +137,12 @@ export default function SettingsPage() {
                 onChange={handleChange}
                 placeholder={t("settings.companyNamePlaceholder")}
                 required
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.ownerPerson")}
               </label>
               <input
@@ -151,14 +151,14 @@ export default function SettingsPage() {
                 value={formData.owner_person}
                 onChange={handleChange}
                 placeholder={t("settings.ownerPersonPlaceholder")}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.email")}
               </label>
               <input
@@ -166,12 +166,12 @@ export default function SettingsPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-sans"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57] font-sans"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.phone")}
               </label>
               <input
@@ -179,13 +179,13 @@ export default function SettingsPage() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+            <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
               {t("settings.address")}
             </label>
             <input
@@ -193,13 +193,13 @@ export default function SettingsPage() {
               name="business_address"
               value={formData.business_address}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.city")}
               </label>
               <input
@@ -207,12 +207,12 @@ export default function SettingsPage() {
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.state")}
               </label>
               <input
@@ -220,12 +220,12 @@ export default function SettingsPage() {
                 name="state"
                 value={formData.state}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500 font-devanagari"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+              <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
                 {t("settings.pinCode")}
               </label>
               <input
@@ -233,13 +233,13 @@ export default function SettingsPage() {
                 name="pin_code"
                 value={formData.pin_code}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white focus:outline-none focus:ring-2 focus:ring-[#102F57]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-anumaan-charcoal-700 uppercase tracking-wider mb-1 font-devanagari">
+            <label className="block text-xs font-semibold text-[#263445] uppercase tracking-wider mb-1">
               {t("settings.gstin")}
             </label>
             <input
@@ -247,7 +247,7 @@ export default function SettingsPage() {
               name="gstin"
               value={formData.gstin}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm rounded-md border border-anumaan-border uppercase focus:ring-1 focus:ring-anumaan-gold-500 focus:border-anumaan-gold-500"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[#DCE4EE] text-[#263445] bg-white uppercase focus:outline-none focus:ring-2 focus:ring-[#102F57]"
             />
           </div>
 
@@ -255,9 +255,9 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-anumaan-charcoal-900 text-white text-sm font-semibold hover:bg-anumaan-charcoal-800 transition-colors shadow-xs font-devanagari disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#102F57] text-white text-sm font-semibold hover:bg-[#0c2444] transition shadow-sm disabled:opacity-50"
             >
-              <Save className="w-4 h-4 text-anumaan-gold-500" />
+              <Save className="w-4 h-4 text-[#F7931E]" />
               <span>{loading ? t("common.saving") : t("common.save")}</span>
             </button>
           </div>
@@ -265,26 +265,26 @@ export default function SettingsPage() {
       </div>
 
       {/* 3. Members Overview */}
-      <div className="p-6 rounded-xl bg-white border border-anumaan-border shadow-xs space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-anumaan-border-light">
-          <Users className="w-5 h-5 text-anumaan-gold-600" />
-          <h2 className="text-base font-semibold text-anumaan-charcoal-900 font-devanagari">
+      <div className="p-6 rounded-xl bg-white border border-[#DCE4EE] shadow-sm space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-[#DCE4EE]">
+          <Users className="w-5 h-5 text-[#F7931E]" />
+          <h2 className="text-base font-semibold text-[#102F57] font-heading">
             {t("settings.membersTitle")}
           </h2>
         </div>
 
-        <div className="divide-y divide-anumaan-border-light">
+        <div className="divide-y divide-[#DCE4EE]">
           {members.length === 0 ? (
-            <p className="text-sm text-anumaan-charcoal-500 font-devanagari py-2">
+            <p className="text-sm text-[#64748B] py-2">
               {currentOrg?.owner_person || "Current User"} (Owner)
             </p>
           ) : (
             members.map((m) => (
               <div key={m.id} className="py-2.5 flex items-center justify-between text-sm">
-                <span className="font-medium text-anumaan-charcoal-900 font-devanagari">
+                <span className="font-medium text-[#263445]">
                   {m.user_full_name || "User"}
                 </span>
-                <span className="px-2 py-0.5 rounded text-xs uppercase tracking-wider font-semibold bg-anumaan-beige-100 text-anumaan-charcoal-700">
+                <span className="px-2 py-0.5 rounded text-xs uppercase tracking-wider font-semibold bg-[#EEF3F9] text-[#102F57] border border-[#DCE4EE]">
                   {m.role}
                 </span>
               </div>
