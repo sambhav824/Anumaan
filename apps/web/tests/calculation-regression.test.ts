@@ -98,3 +98,4 @@ describe("Calculation Regression Suite — Zero-Value & Road Takeoff Fixes", () 
     expect(formatIndianCurrency(1850734.98)).toBe("₹18,50,734.98");
   });
 });
+

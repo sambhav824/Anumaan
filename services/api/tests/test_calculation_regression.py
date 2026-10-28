@@ -81,3 +81,4 @@ def test_road_earthwork():
     fill = calculate_road_earthwork(100, 5, Decimal("0.8"), "fill", "m")
     assert fill["quantity"] == Decimal("400.0000")
     assert fill["cut_or_fill"] == "fill"
+
