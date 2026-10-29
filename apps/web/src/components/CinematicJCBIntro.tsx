@@ -4,16 +4,17 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import * as THREE from "three";
-import { ArrowRight, RotateCcw, Play, Sparkles, Building2, HardHat, FileSpreadsheet } from "lucide-react";
+import { ArrowRight, RotateCcw, Building2, HardHat, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 /**
- * Procedural letter shape generator for clean, offline-reliable 3D text.
- * Generates uppercase letter 2D vector shapes with outer path and inner holes.
+ * Procedural vector shapes for uppercase architectural lettering.
+ * Every letter is defined in upright 2D coordinates:
+ * bottom at y = 0, top at y = height, width = width.
  */
-function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
+function createLetterShape(char: string, w = 0.72, h = 1.05): THREE.Shape {
   const shape = new THREE.Shape();
-  const t = 0.18; // Stroke thickness
+  const t = 0.17; // Clean architectural stroke thickness
 
   switch (char) {
     case "W": {
@@ -26,9 +27,9 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
       shape.lineTo(sw * 3.3, 0);
       shape.lineTo(w, h);
       shape.lineTo(w - t, h);
-      shape.lineTo(sw * 2.8, t * 1.2);
-      shape.lineTo(sw * 2, h * 0.85);
-      shape.lineTo(sw * 1.2, t * 1.2);
+      shape.lineTo(sw * 2.85, t * 1.2);
+      shape.lineTo(sw * 2, h * 0.82);
+      shape.lineTo(sw * 1.15, t * 1.2);
       shape.lineTo(t, h);
       shape.closePath();
       return shape;
@@ -40,8 +41,8 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
       shape.lineTo(w, t);
       shape.lineTo(t, t);
       shape.lineTo(t, (h - t) / 2);
-      shape.lineTo(w * 0.75, (h - t) / 2);
-      shape.lineTo(w * 0.75, (h + t) / 2);
+      shape.lineTo(w * 0.78, (h - t) / 2);
+      shape.lineTo(w * 0.78, (h + t) / 2);
       shape.lineTo(t, (h + t) / 2);
       shape.lineTo(t, h - t);
       shape.lineTo(w, h - t);
@@ -76,13 +77,12 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
     }
 
     case "O": {
-      // Outer rect
       shape.moveTo(0, 0);
       shape.lineTo(w, 0);
       shape.lineTo(w, h);
       shape.lineTo(0, h);
       shape.closePath();
-      // Inner hole
+
       const hole = new THREE.Path();
       hole.moveTo(t, t);
       hole.lineTo(t, h - t);
@@ -97,13 +97,13 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
       shape.moveTo(0, 0);
       shape.lineTo(t, 0);
       shape.lineTo(t, h - t * 1.8);
-      shape.lineTo(w / 2, t * 1.5);
+      shape.lineTo(w / 2, t * 1.4);
       shape.lineTo(w - t, h - t * 1.8);
       shape.lineTo(w - t, 0);
       shape.lineTo(w, 0);
       shape.lineTo(w, h);
       shape.lineTo(w - t * 1.2, h);
-      shape.lineTo(w / 2, h * 0.35);
+      shape.lineTo(w / 2, h * 0.38);
       shape.lineTo(t * 1.2, h);
       shape.lineTo(0, h);
       shape.closePath();
@@ -130,16 +130,15 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
       shape.lineTo(w * 0.65, h);
       shape.lineTo(w, 0);
       shape.lineTo(w - t, 0);
-      shape.lineTo(w * 0.72, h * 0.4);
-      shape.lineTo(w * 0.28, h * 0.4);
+      shape.lineTo(w * 0.72, h * 0.38);
+      shape.lineTo(w * 0.28, h * 0.38);
       shape.lineTo(t, 0);
       shape.closePath();
 
-      // Inner triangle hole
       const holeA = new THREE.Path();
-      holeA.moveTo(w * 0.35, h * 0.55);
-      holeA.lineTo(w * 0.5, h * 0.85);
-      holeA.lineTo(w * 0.65, h * 0.55);
+      holeA.moveTo(w * 0.34, h * 0.52);
+      holeA.lineTo(w * 0.5, h * 0.82);
+      holeA.lineTo(w * 0.66, h * 0.52);
       holeA.closePath();
       shape.holes.push(holeA);
       return shape;
@@ -148,13 +147,13 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
     case "N": {
       shape.moveTo(0, 0);
       shape.lineTo(t, 0);
-      shape.lineTo(w - t * 1.2, h - t * 1.5);
-      shape.lineTo(w - t * 1.2, 0);
+      shape.lineTo(w - t * 1.15, h - t * 1.45);
+      shape.lineTo(w - t * 1.15, 0);
       shape.lineTo(w, 0);
       shape.lineTo(w, h);
       shape.lineTo(w - t, h);
-      shape.lineTo(t * 1.2, t * 1.5);
-      shape.lineTo(t * 1.2, h);
+      shape.lineTo(t * 1.15, t * 1.45);
+      shape.lineTo(t * 1.15, h);
       shape.lineTo(0, h);
       shape.closePath();
       return shape;
@@ -185,7 +184,7 @@ function createLetterShape(char: string, w = 0.8, h = 1.0): THREE.Shape {
 }
 
 /**
- * Generates procedural canvas texture for the ground architectural grid.
+ * Procedural ground texture with subtle architectural construction grid.
  */
 function createGroundTexture(): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
@@ -193,12 +192,12 @@ function createGroundTexture(): THREE.CanvasTexture {
   canvas.height = 1024;
   const ctx = canvas.getContext("2d")!;
 
-  // Warm light beige base
-  ctx.fillStyle = "#F6F3EE";
+  // Warm light beige/cream foundation
+  ctx.fillStyle = "#F5F2EC";
   ctx.fillRect(0, 0, 1024, 1024);
 
   // Subtle minor grid
-  ctx.strokeStyle = "#E8E2D8";
+  ctx.strokeStyle = "#E8E2D7";
   ctx.lineWidth = 1.0;
   const step = 32;
   for (let x = 0; x <= 1024; x += step) {
@@ -214,9 +213,9 @@ function createGroundTexture(): THREE.CanvasTexture {
     ctx.stroke();
   }
 
-  // Major architectural grid lines
-  ctx.strokeStyle = "#D9D0C3";
-  ctx.lineWidth = 2.0;
+  // Major grid
+  ctx.strokeStyle = "#D8D0C3";
+  ctx.lineWidth = 1.8;
   const majorStep = 128;
   for (let x = 0; x <= 1024; x += majorStep) {
     ctx.beginPath();
@@ -231,14 +230,14 @@ function createGroundTexture(): THREE.CanvasTexture {
     ctx.stroke();
   }
 
-  // Engineering crosshairs and coordinate markers
-  ctx.fillStyle = "#A89F91";
-  ctx.font = "bold 14px 'Courier New', monospace";
+  // Engineering crosshairs
+  ctx.fillStyle = "#9C9283";
+  ctx.font = "bold 13px 'Courier New', monospace";
   for (let x = majorStep; x < 1024; x += majorStep * 2) {
     for (let y = majorStep; y < 1024; y += majorStep * 2) {
-      ctx.fillText(`+`, x - 4, y + 5);
+      ctx.fillText("+", x - 4, y + 5);
       ctx.font = "9px 'Courier New', monospace";
-      ctx.fillText(`${(x / 64).toFixed(1)}m`, x + 8, y + 12);
+      ctx.fillText(`${(x / 64).toFixed(1)}m`, x + 7, y + 13);
     }
   }
 
@@ -250,228 +249,371 @@ function createGroundTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Creates high-detail procedural 3D JCB backhoe loader mesh group.
+ * Builds a realistic, highly detailed 3D yellow JCB backhoe loader.
+ * Features:
+ * - Proper construction equipment proportions
+ * - Heavy yellow chassis with beveled hood and radiator grille
+ * - Fully enclosed ROPS/FOPS operator cabin with tinted glass, roll-cage pillars, seat, and steering wheel
+ * - Rear curved mudguards with mudflaps & side operator steps
+ * - Twin vertical outrigger stabilizer jacks
+ * - Chrome hydraulic cylinders and hoses
+ * - Articulated front loader arms with 4-in-1 bucket and 6 digging teeth
+ * - Realistic rear backhoe excavator arm folded in roading configuration
+ * - Large rear tractor drive wheels with 16 pairs of radial chevron tread lugs!
+ * - Smaller front steering wheels with industrial rib treads and yellow dish rims
  */
-function createJCBGroup() {
+function createRealisticJCB() {
   const jcb = new THREE.Group();
 
-  // Materials
+  // Materials with authentic PBR properties
   const jcbYellow = new THREE.MeshStandardMaterial({
-    color: 0xF5B000,
-    roughness: 0.35,
-    metalness: 0.2,
+    color: 0xF5A800, // Iconic JCB construction yellow
+    roughness: 0.32,
+    metalness: 0.25,
   });
-  const darkMetal = new THREE.MeshStandardMaterial({
-    color: 0x1E242C,
-    roughness: 0.6,
-    metalness: 0.5,
+  const darkChassis = new THREE.MeshStandardMaterial({
+    color: 0x1A1F26, // Heavy cast dark industrial steel
+    roughness: 0.65,
+    metalness: 0.55,
   });
-  const chromeMetal = new THREE.MeshStandardMaterial({
-    color: 0xE8ECEF,
-    roughness: 0.1,
+  const chromeRam = new THREE.MeshStandardMaterial({
+    color: 0xF0F4F8,
+    roughness: 0.08,
     metalness: 0.95,
   });
   const tireRubber = new THREE.MeshStandardMaterial({
-    color: 0x18181A,
-    roughness: 0.85,
-    metalness: 0.1,
+    color: 0x16181B, // Matte vulcanized carbon black rubber
+    roughness: 0.88,
+    metalness: 0.08,
   });
   const cabGlass = new THREE.MeshPhysicalMaterial({
-    color: 0x1A2536,
+    color: 0x1A2636,
     transparent: true,
-    opacity: 0.65,
-    roughness: 0.1,
-    metalness: 0.8,
-    transmission: 0.5,
+    opacity: 0.55,
+    roughness: 0.12,
+    metalness: 0.85,
+    transmission: 0.6,
+  });
+  const castSteel = new THREE.MeshStandardMaterial({
+    color: 0x0F1318,
+    roughness: 0.75,
+    metalness: 0.45,
   });
 
-  // 1. Main Chassis & Lower Body
-  const chassisGeom = new THREE.BoxGeometry(3.4, 0.7, 1.6);
-  const chassis = new THREE.Mesh(chassisGeom, darkMetal);
-  chassis.position.set(0, 0.95, 0);
+  // 1. Lower Chassis & Main Belly Pan
+  const chassisGeom = new THREE.BoxGeometry(3.6, 0.65, 1.55);
+  const chassis = new THREE.Mesh(chassisGeom, darkChassis);
+  chassis.position.set(0, 0.92, 0);
   chassis.castShadow = true;
   chassis.receiveShadow = true;
   jcb.add(chassis);
 
-  // 2. Front Engine Bonnet / Hood
-  const hoodGeom = new THREE.BoxGeometry(1.6, 0.75, 1.45);
+  // Front Heavy Bumper / Counterweight
+  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 1.58), darkChassis);
+  bumper.position.set(1.78, 0.88, 0);
+  bumper.castShadow = true;
+  jcb.add(bumper);
+
+  // Side Operator Boarding Steps (both sides)
+  [-0.92, 0.92].forEach((zSide) => {
+    const stepBox = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.1, 0.28), darkChassis);
+    stepBox.position.set(-0.35, 0.48, zSide);
+    const grabRail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 8), darkChassis);
+    grabRail.position.set(-0.65, 1.35, zSide);
+    jcb.add(stepBox, grabRail);
+  });
+
+  // Rear Vertical Outrigger Stabilizer Jacks
+  [-0.96, 0.96].forEach((zSide) => {
+    const jackLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.9, 10), darkChassis);
+    jackLeg.position.set(-1.45, 0.8, zSide);
+    const jackFoot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.28), darkChassis);
+    jackFoot.position.set(-1.45, 0.38, zSide);
+    jcb.add(jackLeg, jackFoot);
+  });
+
+  // 2. Engine Hood & Front Grille
+  const hoodGeom = new THREE.BoxGeometry(1.65, 0.72, 1.42);
   const hood = new THREE.Mesh(hoodGeom, jcbYellow);
-  hood.position.set(0.95, 1.4, 0);
+  hood.position.set(0.95, 1.42, 0);
   hood.castShadow = true;
   jcb.add(hood);
 
-  // Front Radiator Grille
-  const grilleGeom = new THREE.BoxGeometry(0.08, 0.55, 1.3);
-  const grille = new THREE.Mesh(grilleGeom, darkMetal);
-  grille.position.set(1.78, 1.35, 0);
+  // Radiator Front Louvered Grille
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.56, 1.25), darkChassis);
+  grille.position.set(1.79, 1.38, 0);
   jcb.add(grille);
 
-  // Front Dual Headlights (Glow)
-  const headlightMat = new THREE.MeshStandardMaterial({
-    color: 0xFFF5DD,
+  // Dual Headlights & Indicators
+  const hlMat = new THREE.MeshStandardMaterial({
+    color: 0xFFFFEE,
     emissive: 0xFFE082,
-    emissiveIntensity: 1.5,
+    emissiveIntensity: 1.8,
   });
-  const hlLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.22), headlightMat);
-  hlLeft.position.set(1.77, 1.45, 0.45);
-  const hlRight = hlLeft.clone();
-  hlRight.position.set(1.77, 1.45, -0.45);
-  jcb.add(hlLeft, hlRight);
+  const indicatorMat = new THREE.MeshStandardMaterial({
+    color: 0xF59E0B,
+    emissive: 0xD97706,
+    emissiveIntensity: 1.2,
+  });
+  [-0.48, 0.48].forEach((zSide) => {
+    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.24), hlMat);
+    hl.position.set(1.78, 1.48, zSide);
+    const ind = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.1), indicatorMat);
+    ind.position.set(1.78, 1.48, zSide + (zSide > 0 ? 0.2 : -0.2));
+    jcb.add(hl, ind);
+  });
 
-  // 3. Operator Cabin
-  const cabWidth = 1.35;
-  const cabLength = 1.4;
-  const cabHeight = 1.45;
-  const cabY = 1.35 + cabHeight / 2;
+  // Vertical Exhaust Stack with Rain Flap & Heat Shield
+  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.4, 12), darkChassis);
+  exhaust.position.set(0.38, 2.15, 0.68);
+  const exhaustShield = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.9, 12), castSteel);
+  exhaustShield.position.set(0.38, 1.95, 0.68);
+  const flap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.09), chromeRam);
+  flap.position.set(0.38, 2.87, 0.68);
+  flap.rotation.z = 0.35;
+  jcb.add(exhaust, exhaustShield, flap);
 
-  // Glass Box
-  const glassGeom = new THREE.BoxGeometry(cabLength - 0.05, cabHeight - 0.05, cabWidth - 0.05);
-  const cabWindows = new THREE.Mesh(glassGeom, cabGlass);
-  cabWindows.position.set(-0.55, cabY, 0);
-  jcb.add(cabWindows);
+  // 3. Enclosed Operator Cabin
+  const cabLength = 1.45;
+  const cabWidth = 1.32;
+  const cabHeight = 1.5;
+  const cabCenterY = 1.38 + cabHeight / 2;
 
-  // ROPS Roll Cage Pillars
-  const pillarGeom = new THREE.CylinderGeometry(0.04, 0.04, cabHeight, 8);
-  const pillarPositions = [
-    [-0.55 + cabLength / 2, cabY, cabWidth / 2],
-    [-0.55 + cabLength / 2, cabY, -cabWidth / 2],
-    [-0.55 - cabLength / 2, cabY, cabWidth / 2],
-    [-0.55 - cabLength / 2, cabY, -cabWidth / 2],
+  // Smoked Panoramic Glass
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(cabLength - 0.04, cabHeight - 0.04, cabWidth - 0.04),
+    cabGlass
+  );
+  glass.position.set(-0.52, cabCenterY, 0);
+  jcb.add(glass);
+
+  // 6 Structural ROPS/FOPS Safety Pillars
+  const pillarGeom = new THREE.CylinderGeometry(0.038, 0.038, cabHeight, 8);
+  const pillarOffsets = [
+    [cabLength / 2, cabWidth / 2],
+    [cabLength / 2, -cabWidth / 2],
+    [0, cabWidth / 2],
+    [0, -cabWidth / 2],
+    [-cabLength / 2, cabWidth / 2],
+    [-cabLength / 2, -cabWidth / 2],
   ];
-  pillarPositions.forEach(([px, py, pz]) => {
-    const pillar = new THREE.Mesh(pillarGeom, darkMetal);
-    pillar.position.set(px, py, pz);
+  pillarOffsets.forEach(([ox, oz]) => {
+    const pillar = new THREE.Mesh(pillarGeom, darkChassis);
+    pillar.position.set(-0.52 + ox, cabCenterY, oz);
+    pillar.castShadow = true;
     jcb.add(pillar);
   });
 
-  // Cab Roof Canopy
-  const roofGeom = new THREE.BoxGeometry(cabLength + 0.2, 0.12, cabWidth + 0.2);
-  const roof = new THREE.Mesh(roofGeom, jcbYellow);
-  roof.position.set(-0.55, cabY + cabHeight / 2 + 0.06, 0);
+  // Cab Roof with Overhang
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(cabLength + 0.22, 0.12, cabWidth + 0.22), jcbYellow);
+  roof.position.set(-0.52, cabCenterY + cabHeight / 2 + 0.06, 0);
   roof.castShadow = true;
   jcb.add(roof);
+
+  // Roof Work Floodlights (2 front, 2 rear)
+  const workLightMat = new THREE.MeshStandardMaterial({
+    color: 0xEEF5FF,
+    emissive: 0xCCE3F5,
+    emissiveIntensity: 1.2,
+  });
+  [-0.45, 0.45].forEach((zSide) => {
+    const frontLamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.14), workLightMat);
+    frontLamp.position.set(-0.52 + cabLength / 2 + 0.1, cabCenterY + cabHeight / 2 + 0.06, zSide);
+    const rearLamp = frontLamp.clone();
+    rearLamp.position.x = -0.52 - cabLength / 2 - 0.1;
+    jcb.add(frontLamp, rearLamp);
+  });
 
   // Amber Rotating Warning Beacon
   const beaconMat = new THREE.MeshStandardMaterial({
     color: 0xF59E0B,
-    emissive: 0xD97706,
-    emissiveIntensity: 2.0,
+    emissive: 0xF59E0B,
+    emissiveIntensity: 2.2,
   });
-  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.18, 12), beaconMat);
-  beacon.position.set(-0.55, cabY + cabHeight / 2 + 0.2, 0.35);
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.18, 12), beaconMat);
+  beacon.position.set(-0.52, cabCenterY + cabHeight / 2 + 0.2, 0.38);
   jcb.add(beacon);
 
-  // Vertical Exhaust Pipe with Flap
-  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 10), darkMetal);
-  exhaust.position.set(0.35, 2.05, 0.65);
-  const exhaustCap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.1), chromeMetal);
-  exhaustCap.position.set(0.35, 2.72, 0.65);
-  exhaustCap.rotation.z = 0.35;
-  jcb.add(exhaust, exhaustCap);
+  // Cabin Interior: Seat & Steering Column
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.55, 0.42), darkChassis);
+  seat.position.set(-0.62, 1.62, 0);
+  const steeringPost = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.65, 8), darkChassis);
+  steeringPost.position.set(-0.15, 1.7, 0);
+  steeringPost.rotation.z = -0.4;
+  const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.022, 8, 16), darkChassis);
+  wheelRim.position.set(-0.25, 1.95, 0);
+  wheelRim.rotation.y = Math.PI / 2;
+  wheelRim.rotation.x = -0.4;
+  jcb.add(seat, steeringPost, wheelRim);
 
-  // 4. Front Loader Arms and Bucket
-  const loaderArmGroup = new THREE.Group();
-  const armGeom = new THREE.BoxGeometry(1.6, 0.14, 0.12);
+  // Rear Heavy Wheel Fenders
+  [-0.92, 0.92].forEach((zSide) => {
+    const fender = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.1, 0.42), jcbYellow);
+    fender.position.set(-0.95, 1.55, zSide);
+    const mudflap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.38), darkChassis);
+    mudflap.position.set(-1.75, 1.25, zSide);
+    jcb.add(fender, mudflap);
+  });
+
+  // 4. Front Loader Assembly
+  const loaderGroup = new THREE.Group();
+
+  // Arched Lift Arms (left and right)
+  const armGeom = new THREE.BoxGeometry(1.7, 0.16, 0.12);
   const armLeft = new THREE.Mesh(armGeom, jcbYellow);
-  armLeft.position.set(2.0, 1.05, 0.75);
+  armLeft.position.set(2.05, 1.05, 0.74);
   armLeft.rotation.z = -0.32;
   const armRight = armLeft.clone();
-  armRight.position.z = -0.75;
+  armRight.position.z = -0.74;
 
-  // Front Loader Bucket
-  const bucketGeom = new THREE.BoxGeometry(0.65, 0.7, 1.9);
+  // Crossmember Torque Tube
+  const torqueTube = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.48, 10), darkChassis);
+  torqueTube.position.set(1.9, 1.15, 0);
+  torqueTube.rotation.x = Math.PI / 2;
+
+  // Hydraulic Lift Rams
+  const cylGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.95, 10);
+  const rodGeom = new THREE.CylinderGeometry(0.028, 0.028, 0.9, 10);
+  [-0.66, 0.66].forEach((zSide) => {
+    const barrel = new THREE.Mesh(cylGeom, darkChassis);
+    barrel.position.set(1.4, 1.25, zSide);
+    barrel.rotation.z = 1.08;
+    const rod = new THREE.Mesh(rodGeom, chromeRam);
+    rod.position.set(1.76, 1.02, zSide);
+    rod.rotation.z = 1.08;
+    loaderGroup.add(barrel, rod);
+  });
+
+  // 4-in-1 Front Loader Bucket
+  const bucketGeom = new THREE.BoxGeometry(0.72, 0.72, 1.95);
   const bucket = new THREE.Mesh(bucketGeom, jcbYellow);
-  bucket.position.set(2.8, 0.6, 0);
-  bucket.rotation.z = 0.15;
+  bucket.position.set(2.88, 0.58, 0);
+  bucket.rotation.z = 0.14;
   bucket.castShadow = true;
 
-  // Bucket Digging Teeth
-  const toothMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.3 });
-  for (let z = -0.8; z <= 0.85; z += 0.32) {
-    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), toothMat);
-    tooth.rotation.z = -Math.PI / 2 + 0.15;
-    tooth.position.set(3.14, 0.32, z);
-    loaderArmGroup.add(tooth);
+  // 6 Cast Digging Teeth
+  for (let z = -0.82; z <= 0.85; z += 0.33) {
+    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), castSteel);
+    tooth.position.set(3.26, 0.28, z);
+    tooth.rotation.z = -Math.PI / 2 + 0.14;
+    loaderGroup.add(tooth);
   }
 
-  // Hydraulic Cylinders
-  const cylGeom = new THREE.CylinderGeometry(0.04, 0.04, 0.9, 10);
-  const rodGeom = new THREE.CylinderGeometry(0.025, 0.025, 0.8, 10);
-  const cylLeft = new THREE.Mesh(cylGeom, darkMetal);
-  cylLeft.position.set(1.4, 1.25, 0.65);
-  cylLeft.rotation.z = 1.1;
-  const rodLeft = new THREE.Mesh(rodGeom, chromeMetal);
-  rodLeft.position.set(1.75, 1.05, 0.65);
-  rodLeft.rotation.z = 1.1;
+  loaderGroup.add(armLeft, armRight, torqueTube, bucket);
+  jcb.add(loaderGroup);
 
-  loaderArmGroup.add(armLeft, armRight, bucket, cylLeft, rodLeft);
-  jcb.add(loaderArmGroup);
-
-  // 5. Rear Excavator Backhoe Arm (Folded in Roading Position)
+  // 5. Rear Excavator Backhoe Arm (Roading Configuration)
   const backhoeGroup = new THREE.Group();
-  backhoeGroup.position.set(-1.7, 1.1, 0);
+  backhoeGroup.position.set(-1.75, 1.1, 0);
 
   // Kingpost Swivel Base
-  const kingpost = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.5), darkMetal);
+  const kingpost = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.68, 0.52), darkChassis);
   backhoeGroup.add(kingpost);
 
-  // Boom (Heavy curved yellow arm)
-  const boom = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 0.18), jcbYellow);
-  boom.position.set(-0.6, 0.65, 0);
-  boom.rotation.z = 0.85;
+  // Arched Main Boom
+  const boom = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.24, 0.2), jcbYellow);
+  boom.position.set(-0.65, 0.68, 0);
+  boom.rotation.z = 0.82;
 
-  // Dipper (arm folded down)
-  const dipper = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.14), jcbYellow);
-  dipper.position.set(-1.15, 0.85, 0);
-  dipper.rotation.z = -1.2;
+  // Dipper Arm (Stick folded downward)
+  const dipper = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.18, 0.16), jcbYellow);
+  dipper.position.set(-1.22, 0.88, 0);
+  dipper.rotation.z = -1.22;
 
-  // Backhoe Digging Bucket
-  const backhoeBucket = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.4), darkMetal);
-  backhoeBucket.position.set(-1.3, 0.35, 0);
-  backhoeBucket.rotation.z = 0.4;
+  // Excavator Digging Bucket
+  const backhoeBucket = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.42), darkChassis);
+  backhoeBucket.position.set(-1.38, 0.35, 0);
+  backhoeBucket.rotation.z = 0.38;
 
-  backhoeGroup.add(boom, dipper, backhoeBucket);
+  // 4 Backhoe Digging Teeth
+  for (let bz = -0.15; bz <= 0.16; bz += 0.1) {
+    const bTooth = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.14, 4), castSteel);
+    bTooth.position.set(-1.58, 0.16, bz);
+    bTooth.rotation.z = Math.PI / 2 + 0.38;
+    backhoeGroup.add(bTooth);
+  }
+
+  // Backhoe Hydraulic Cylinders
+  const bhCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8), darkChassis);
+  bhCyl.position.set(-0.45, 0.95, 0);
+  bhCyl.rotation.z = 0.82;
+  const bhRod = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.7, 8), chromeRam);
+  bhRod.position.set(-0.75, 1.25, 0);
+  bhRod.rotation.z = 0.82;
+
+  backhoeGroup.add(boom, dipper, backhoeBucket, bhCyl, bhRod);
   jcb.add(backhoeGroup);
 
-  // 6. Wheels (Front and Rear with active rotation)
-  const wheels: { mesh: THREE.Group; radius: number }[] = [];
+  // 6. High-Detail Wheels with Realistic Chevron Lugs
+  const wheels: { group: THREE.Group; radius: number }[] = [];
 
-  // Front Wheel Generator (smaller steering wheels)
+  // Front Wheel: Smaller steering wheel with industrial tread
   const makeFrontWheel = (z: number) => {
     const wg = new THREE.Group();
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.35, 20), tireRubber);
+    wg.position.set(1.15, 0.44, z);
+
+    // Tire Base Cylinder
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.34, 24), tireRubber);
     tire.rotation.x = Math.PI / 2;
     tire.castShadow = true;
 
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.36, 16), jcbYellow);
+    // Yellow Steel Dish Rim
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.35, 18), jcbYellow);
     rim.rotation.x = Math.PI / 2;
 
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.38, 8), darkMetal);
+    // Dark Hub & 6 Lug Nuts
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.37, 10), darkChassis);
     hub.rotation.x = Math.PI / 2;
 
     wg.add(tire, rim, hub);
-    wg.position.set(1.15, 0.44, z);
     jcb.add(wg);
-    wheels.push({ mesh: wg, radius: 0.44 });
+    wheels.push({ group: wg, radius: 0.44 });
   };
 
-  // Rear Wheel Generator (giant heavy tractor wheels with chevron tread lugs)
+  // Rear Drive Wheel: Giant tractor wheel with 16 pairs of authentic angled chevron lugs!
   const makeRearWheel = (z: number) => {
     const wg = new THREE.Group();
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.74, 0.52, 24), tireRubber);
+    wg.position.set(-0.95, 0.76, z);
+
+    // Main Tire Body
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.74, 0.54, 32), tireRubber);
     tire.rotation.x = Math.PI / 2;
     tire.castShadow = true;
 
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.54, 20), jcbYellow);
+    // Deep-Dish Yellow Rim
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.55, 24), jcbYellow);
     rim.rotation.x = Math.PI / 2;
 
-    const planetary = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.58, 10), darkMetal);
+    // Heavy Planetary Final Drive Hub
+    const planetary = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.59, 12), darkChassis);
     planetary.rotation.x = Math.PI / 2;
 
     wg.add(tire, rim, planetary);
-    wg.position.set(-0.95, 0.74, z);
+
+    // 16 Pairs of Chevron Tread Lugs
+    const lugGeom = new THREE.BoxGeometry(0.16, 0.055, 0.22);
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const lx = Math.cos(angle) * 0.76;
+      const ly = Math.sin(angle) * 0.76;
+
+      // Left branch of V-chevron
+      const lugL = new THREE.Mesh(lugGeom, tireRubber);
+      lugL.position.set(lx, ly, -0.11);
+      lugL.rotation.z = angle;
+      lugL.rotation.y = 0.35;
+
+      // Right branch of V-chevron
+      const lugR = new THREE.Mesh(lugGeom, tireRubber);
+      lugR.position.set(lx, ly, 0.11);
+      lugR.rotation.z = angle;
+      lugR.rotation.y = -0.35;
+
+      wg.add(lugL, lugR);
+    }
+
     jcb.add(wg);
-    wheels.push({ mesh: wg, radius: 0.74 });
+    wheels.push({ group: wg, radius: 0.76 });
   };
 
   makeFrontWheel(0.92);
@@ -493,10 +635,8 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [phase, setPhase] = useState<"running" | "completed">("running");
-  const [printProgress, setPrintProgress] = useState(0);
   const [hasWebGLError, setHasWebGLError] = useState(false);
 
-  // Animation reset handle
   const animationResetRef = useRef<(() => void) | null>(null);
 
   const handleFinish = useCallback(() => {
@@ -515,11 +655,10 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     const container = containerRef.current;
     if (!container) return;
 
-    // Check WebGL availability
+    // WebGL capability check
     const canvasTest = document.createElement("canvas");
     const gl = canvasTest.getContext("webgl") || canvasTest.getContext("experimental-webgl");
     if (!gl) {
-      console.warn("WebGL not supported; falling back gracefully.");
       setHasWebGLError(true);
       return;
     }
@@ -527,15 +666,17 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
 
-    // 1. Scene setup
+    // 1. Scene & Atmosphere
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#F6F3EE");
-    scene.fog = new THREE.FogExp2(0xF6F3EE, 0.016);
+    scene.background = new THREE.Color("#F6F3EE"); // Warm off-white
+    scene.fog = new THREE.FogExp2(0xF6F3EE, 0.012);
 
-    // 2. Camera setup - Three-quarter elevated architectural viewpoint
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 150);
-    camera.position.set(-4.0, 5.2, 14.5);
-    camera.lookAt(0, 0.8, 0);
+    // 2. Camera Setup: Slightly elevated 3/4 architectural viewpoint
+    // Calibrated so the entire message "WELCOME TO ANUMAAN" and the JCB are framed without cropping
+    const isMobile = width < 768;
+    const camera = new THREE.PerspectiveCamera(isMobile ? 46 : 38, width / height, 0.1, 120);
+    camera.position.set(0, isMobile ? 4.2 : 3.8, isMobile ? 14.5 : 12.2);
+    camera.lookAt(0.6, 0.85, 0);
 
     // 3. Renderer with local clipping enabled for position-synchronized reveal
     const renderer = new THREE.WebGLRenderer({
@@ -549,71 +690,79 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     renderer.localClippingEnabled = true;
     container.appendChild(renderer.domElement);
 
-    // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xFFFBF0, 0.85);
+    // 4. Lighting: Soft ambient sky and warm directional sunlight
+    const ambientLight = new THREE.AmbientLight(0xFFFBF2, 0.9);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xFFF4D4, 1.4);
-    sunLight.position.set(12, 18, 14);
+    const sunLight = new THREE.DirectionalLight(0xFFF5DC, 1.45);
+    sunLight.position.set(14, 18, 12);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 1;
     sunLight.shadow.camera.far = 45;
-    sunLight.shadow.camera.left = -16;
-    sunLight.shadow.camera.right = 16;
+    sunLight.shadow.camera.left = -18;
+    sunLight.shadow.camera.right = 18;
     sunLight.shadow.camera.top = 10;
     sunLight.shadow.camera.bottom = -10;
-    sunLight.shadow.bias = -0.0004;
+    sunLight.shadow.bias = -0.0003;
     scene.add(sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0xCCE3F5, 0.45);
-    fillLight.position.set(-10, 8, -10);
+    const fillLight = new THREE.DirectionalLight(0xD6E8FA, 0.35);
+    fillLight.position.set(-12, 8, -8);
     scene.add(fillLight);
 
-    // 5. Ground Plane with Architectural Grid Texture
+    // 5. Ground Plane with Architectural Grid
     const groundTexture = createGroundTexture();
     const groundMaterial = new THREE.MeshStandardMaterial({
       map: groundTexture,
-      roughness: 0.85,
-      metalness: 0.05,
+      roughness: 0.88,
+      metalness: 0.04,
     });
-    const groundGeom = new THREE.PlaneGeometry(70, 45);
+    const groundGeom = new THREE.PlaneGeometry(80, 50);
     const ground = new THREE.Mesh(groundGeom, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = 0;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // 6. Dynamic Clipping Plane for Text Reveal
-    // Normal (-1, 0, 0): any letter geometry with X > plane.constant is clipped (hidden).
-    // As JCB moves in +X, plane.constant tracks the print head directly behind the JCB!
-    const clippingPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -20);
+    // 6. Dynamic Clipping Plane for Position-Synchronized Reveal
+    // Normal (-1, 0, 0): any geometry with X > constant is clipped out.
+    // Tracking the rear print threshold of the JCB!
+    const clippingPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -25);
 
-    // 7. 3D Architectural Text "WELCOME TO ANUMAAN"
+    // 7. Freestanding Upright 3D Letters: "WELCOME TO ANUMAAN"
+    // Bottom touches ground at Y = 0; front faces the camera (+Z)
     const textGroup = new THREE.Group();
     scene.add(textGroup);
 
-    const words = [
-      { text: "WELCOME", startX: -9.8 },
-      { text: "TO", startX: -1.8 },
-      { text: "ANUMAAN", startX: 1.2 },
-    ];
-
-    const letterDepth = 0.32;
-    const letterHeight = 1.2;
-    const letterWidth = 0.85;
-    const letterSpacing = 0.22;
-
-    const letterMat = new THREE.MeshStandardMaterial({
-      color: 0x1A2332, // Deep architectural charcoal/stone
-      roughness: 0.55,
-      metalness: 0.2,
+    // Dual-face PBR materials: dark architectural charcoal front face + slightly lighter stone sides
+    const letterFrontMat = new THREE.MeshStandardMaterial({
+      color: 0x1A222E, // Deep charcoal concrete
+      roughness: 0.65,
+      metalness: 0.18,
       clippingPlanes: [clippingPlane],
       clipShadows: true,
     });
+    const letterSideMat = new THREE.MeshStandardMaterial({
+      color: 0x2A3545, // Lighter stone side facets
+      roughness: 0.55,
+      metalness: 0.22,
+      clippingPlanes: [clippingPlane],
+      clipShadows: true,
+    });
+    const letterMaterials = [letterFrontMat, letterSideMat];
 
-    const letterMeshes: { mesh: THREE.Mesh; xCenter: number; char: string }[] = [];
+    const words = [
+      { text: "WELCOME", startX: -7.6 },
+      { text: "TO", startX: -1.3 },
+      { text: "ANUMAAN", startX: 1.1 },
+    ];
+
+    const letterHeight = 1.15;
+    const letterWidth = 0.68;
+    const letterDepth = 0.32; // Genuine 3D depth
+    const letterSpacing = 0.16;
 
     words.forEach((w) => {
       let curX = w.startX;
@@ -623,68 +772,71 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
         const geom = new THREE.ExtrudeGeometry(shape, {
           depth: letterDepth,
           bevelEnabled: true,
-          bevelThickness: 0.04,
-          bevelSize: 0.03,
+          bevelThickness: 0.035,
+          bevelSize: 0.025,
           bevelSegments: 3,
         });
 
-        const mesh = new THREE.Mesh(geom, letterMat);
-        // Lay flat embossed on ground: rotate -90 deg around X
-        mesh.rotation.x = -Math.PI / 2;
-        mesh.position.set(curX, letterDepth, letterHeight * 0.4);
+        const mesh = new THREE.Mesh(geom, letterMaterials);
+        // STANDING VERTICALLY UPRIGHT:
+        // y extends from 0 to letterHeight;
+        // z extends from -letterDepth/2 to +letterDepth/2;
+        // slight -0.06 rad tilt so the front face catches the golden sunlight!
+        mesh.rotation.x = -0.05;
+        mesh.position.set(curX, 0, -0.4);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         textGroup.add(mesh);
 
-        letterMeshes.push({ mesh, xCenter: curX + letterWidth / 2, char });
         curX += letterWidth + letterSpacing;
       }
     });
 
-    // 8. 3D Yellow JCB Backhoe Loader
-    const { jcb, wheels, beacon } = createJCBGroup();
+    // 8. Realistic 3D Yellow JCB Backhoe Loader
+    const { jcb, wheels, beacon } = createRealisticJCB();
+    // Position JCB slightly in front of text (Z = 0.8) so it drives alongside without awkward clipping
+    jcb.position.z = 0.75;
     scene.add(jcb);
 
-    // 9. Dust Particle System
-    const particleCount = 180;
+    // 9. Subtle Ground Dust Particles (emitted behind wheels & as letters emerge)
+    const particleCount = 120;
     const particleGeom = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
     const particleVelocities: { x: number; y: number; z: number; life: number }[] = [];
 
     for (let i = 0; i < particleCount; i++) {
-      particlePositions[i * 3] = -25;
-      particlePositions[i * 3 + 1] = 0;
+      particlePositions[i * 3] = -50;
+      particlePositions[i * 3 + 1] = -10;
       particlePositions[i * 3 + 2] = 0;
       particleVelocities.push({ x: 0, y: 0, z: 0, life: 0 });
     }
     particleGeom.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
 
     const particleMat = new THREE.PointsMaterial({
-      color: 0xD6C7B2,
+      color: 0xD8CABB,
       size: 0.18,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.5,
     });
     const dustPoints = new THREE.Points(particleGeom, particleMat);
     scene.add(dustPoints);
 
-    // 10. Animation Control State
+    // 10. Animation Timing & Path
     let startTime = performance.now();
     let isRunning = true;
     let animId: number;
 
-    const startX = -16.5;
-    const stopX = 8.5;
+    const startX = -13.5; // Starts off-screen left
+    const stopX = 9.8;    // Stops smoothly on the right with full message visible
     const travelDistance = stopX - startX;
-    const travelDuration = 5200; // 5.2 seconds smooth drive
+    const travelDuration = 5600; // 5.6 seconds smooth cinematic drive
     let prevJcbX = startX;
 
     const resetAnimation = () => {
       startTime = performance.now();
       prevJcbX = startX;
       setPhase("running");
-      setPrintProgress(0);
-      clippingPlane.constant = -20;
+      clippingPlane.constant = -25;
     };
     animationResetRef.current = resetAnimation;
 
@@ -695,66 +847,55 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       const tNorm = Math.min(elapsed / travelDuration, 1.0);
 
       // Smooth custom acceleration and deceleration easing
-      const easedT = tNorm < 0.8
-        ? (tNorm / 0.8) * 0.8
-        : 0.8 + Math.sin(((tNorm - 0.8) / 0.2) * (Math.PI / 2)) * 0.2;
+      const easedT = tNorm < 0.82
+        ? (tNorm / 0.82) * 0.82
+        : 0.82 + Math.sin(((tNorm - 0.82) / 0.18) * (Math.PI / 2)) * 0.18;
 
       const currentJcbX = startX + travelDistance * easedT;
       const deltaX = currentJcbX - prevJcbX;
       prevJcbX = currentJcbX;
 
-      // Position JCB
+      // Position vehicle
       jcb.position.x = currentJcbX;
-      jcb.position.z = 0;
 
       // Suspension heave & gentle engine idling vibration
       if (tNorm < 1.0) {
-        jcb.position.y = Math.sin(elapsed * 0.015) * 0.025;
-        jcb.rotation.z = Math.sin(elapsed * 0.012) * 0.012;
+        jcb.position.y = Math.sin(elapsed * 0.016) * 0.022;
+        jcb.rotation.z = Math.sin(elapsed * 0.013) * 0.012;
       } else {
-        // Idling gentle thrum
-        jcb.position.y = Math.sin(elapsed * 0.02) * 0.008;
+        // Idling engine gentle vibration
+        jcb.position.y = Math.sin(elapsed * 0.02) * 0.006;
         jcb.rotation.z = 0;
       }
 
-      // Rotate wheels proportional to translation distance: dAngle = -dx / radius
-      wheels.forEach(({ mesh, radius }) => {
-        mesh.rotation.z -= deltaX / radius;
+      // Rotate 4 wheels in sync with linear displacement: dAngle = -dx / radius
+      wheels.forEach(({ group, radius }) => {
+        group.rotation.z -= deltaX / radius;
       });
 
-      // Beacon rotation
-      beacon.rotation.y = elapsed * 0.01;
+      // Amber beacon rotation
+      beacon.rotation.y = elapsed * 0.012;
 
-      // Live synchronized ground printing
-      // The rear edge of the JCB backhoe is at X - 2.2
-      const printThreshold = currentJcbX - 2.2;
+      // Live Position-Synchronized Text Reveal:
+      // The rear edge of the JCB backhoe is at currentJcbX - 2.5.
+      // Upright letters emerge progressively behind the vehicle!
+      const printThreshold = currentJcbX - 2.5;
       clippingPlane.constant = printThreshold;
 
-      // Calculate overall progress across text boundaries (-9.8 to +7.2)
-      const textMinX = -9.8;
-      const textMaxX = 7.2;
-      const progress = Math.max(0, Math.min(100, Math.round(((printThreshold - textMinX) / (textMaxX - textMinX)) * 100)));
-      setPrintProgress(progress);
-
-      // Camera smooth tracking: pans slightly with the action then locks
-      const targetCamX = THREE.MathUtils.lerp(-4.0, 0.5, Math.min(tNorm * 1.2, 1.0));
-      camera.position.x = targetCamX;
-      camera.lookAt(targetCamX * 0.4, 0.6, 0);
-
-      // Dust particle emissions
+      // Dust particle simulation (only active while vehicle moves)
       if (tNorm < 0.98 && Math.abs(deltaX) > 0.001) {
         const positions = particleGeom.attributes.position.array as Float32Array;
         for (let i = 0; i < particleCount; i++) {
-          if (particleVelocities[i].life <= 0 && Math.random() < 0.25) {
+          if (particleVelocities[i].life <= 0 && Math.random() < 0.28) {
             // Spawn particle behind rear wheels
-            positions[i * 3] = currentJcbX - 1.2 + (Math.random() - 0.5) * 0.8;
-            positions[i * 3 + 1] = 0.08 + Math.random() * 0.15;
-            positions[i * 3 + 2] = (Math.random() - 0.5) * 2.2;
+            positions[i * 3] = currentJcbX - 1.6 + (Math.random() - 0.5) * 0.8;
+            positions[i * 3 + 1] = 0.05 + Math.random() * 0.12;
+            positions[i * 3 + 2] = 0.75 + (Math.random() - 0.5) * 1.8;
 
             particleVelocities[i] = {
-              x: -0.01 - Math.random() * 0.02,
-              y: 0.01 + Math.random() * 0.02,
-              z: (Math.random() - 0.5) * 0.02,
+              x: -0.012 - Math.random() * 0.018,
+              y: 0.012 + Math.random() * 0.018,
+              z: (Math.random() - 0.5) * 0.016,
               life: 1.0,
             };
           } else if (particleVelocities[i].life > 0) {
@@ -763,7 +904,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
             positions[i * 3 + 2] += particleVelocities[i].z;
             particleVelocities[i].life -= 0.025;
             if (particleVelocities[i].life <= 0) {
-              positions[i * 3 + 1] = -5; // Hide
+              positions[i * 3 + 1] = -10; // Hide
             }
           }
         }
@@ -786,13 +927,16 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      const mobile = w < 768;
       camera.aspect = w / h;
+      camera.fov = mobile ? 46 : 38;
+      camera.position.set(0, mobile ? 4.2 : 3.8, mobile ? 14.5 : 12.2);
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     window.addEventListener("resize", handleResize);
 
-    // Keyboard ESC shortcut to skip
+    // ESC shortcut to skip
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && canSkip) {
         handleFinish();
@@ -855,7 +999,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       {/* Three.js Canvas Container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* Top Header Controls */}
+      {/* Top Header Controls (Unobtrusive) */}
       <header className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between pointer-events-none z-20">
         <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-[#DCE4EE] shadow-sm pointer-events-auto">
           <Image
@@ -884,26 +1028,9 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
         )}
       </header>
 
-      {/* Bottom Printing Progress HUD */}
-      {phase === "running" && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-72 sm:w-80 bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl border border-[#DCE4EE] shadow-md z-20 flex flex-col gap-1.5 pointer-events-none transition-opacity duration-300">
-          <div className="flex items-center justify-between text-xs font-semibold text-[#102F57]">
-            <span className="flex items-center gap-1.5 text-[11px] text-[#F7931E]">
-              <HardHat className="w-3.5 h-3.5 animate-bounce" />
-              <span>Printing Construction Blueprint...</span>
-            </span>
-            <span className="font-mono text-[11px] text-[#64748B]">{printProgress}%</span>
-          </div>
-          <div className="w-full bg-[#E8EEF5] h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-[#F7931E] h-full rounded-full transition-all duration-100 ease-out"
-              style={{ width: `${printProgress}%` }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Note: The bottom "Printing Construction Blueprint..." banner has been completely removed as requested */}
 
-      {/* Final Cinematic Brand Reveal Modal Card */}
+      {/* Final Cinematic Brand Card (Fades in after JCB stops and entire message is standing) */}
       {phase === "completed" && (
         <div className="absolute inset-0 flex items-center justify-center p-4 z-30 pointer-events-none animate-in fade-in zoom-in-95 duration-500">
           <div className="max-w-md w-full bg-white/95 backdrop-blur-lg border border-[#DCE4EE] p-6 sm:p-8 rounded-3xl shadow-2xl pointer-events-auto text-center space-y-5">
@@ -930,7 +1057,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
               </p>
             </div>
 
-            {/* Quick Feature Pills */}
+            {/* Feature Highlights */}
             <div className="grid grid-cols-3 gap-2 text-left py-1">
               <div className="p-2.5 rounded-xl bg-[#F6F8FB] border border-[#E8EEF5]">
                 <Building2 className="w-4 h-4 text-[#F7931E] mb-1" />
@@ -949,7 +1076,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
               <button
                 onClick={handleFinish}

@@ -10,3 +10,4 @@ const CinematicJCBIntro = dynamic(
 export default function IntroPage() {
   return <CinematicJCBIntro />;
 }
+
