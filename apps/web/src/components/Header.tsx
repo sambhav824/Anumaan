@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Menu, Search, User } from "lucide-react";
+import Link from "next/link";
+import { Menu, Search, User, Play } from "lucide-react";
 import { LanguageSelector } from "./LanguageSelector";
 import { Logo } from "./Logo";
 import { useTranslation } from "../context/I18nContext";
@@ -56,6 +57,16 @@ export function Header({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* 3D Intro Button */}
+        <Link
+          href="/intro"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#102F57] bg-[#F3F6FA] hover:bg-[#E8EEF5] border border-[#DCE4EE] rounded-xl transition shadow-2xs group"
+          title="Watch 3D Construction Intro"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#F7931E] animate-pulse" />
+          <span>3D Intro</span>
+        </Link>
+
         {/* Multilingual Selector */}
         <LanguageSelector variant="header" />
 

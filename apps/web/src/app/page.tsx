@@ -1,34 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 
-import { useTranslation } from "../context/I18nContext";
+const CinematicJCBIntro = dynamic(
+  () => import("../components/CinematicJCBIntro").then((mod) => mod.CinematicJCBIntro),
+  { ssr: false }
+);
 
 export default function HomePage() {
   const router = useRouter();
-  const { session, loading } = useAuth();
-  const { t } = useTranslation();
+  const { session } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (session) {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/login");
-      }
+  const handleComplete = () => {
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
     }
-  }, [session, loading, router]);
+  };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-anumaan-beige-50">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-anumaan-gold-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-anumaan-charcoal-600 font-devanagari">
-          {t("common.loading") || "Loading..."}
-        </p>
-      </div>
-    </div>
-  );
+  return <CinematicJCBIntro onComplete={handleComplete} />;
 }

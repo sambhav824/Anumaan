@@ -21,7 +21,7 @@ import { useOrg } from "../../../context/OrgContext";
 import { api, Estimate } from "../../../lib/api";
 import { Modal } from "../../../components/Modal";
 import { formatIndianCurrency, calculateQuickEstimate, calculateBoundaryWall } from "../../../lib/calculations";
-import { Zap, Sparkles, Layers, ShieldCheck, MapPin } from "lucide-react";
+import { Zap, Sparkles, Layers, ShieldCheck, MapPin, Ruler } from "lucide-react";
 import { ContractorRatesSection } from "../../../components/ContractorRatesSection";
 
 export default function EstimatesPage() {
