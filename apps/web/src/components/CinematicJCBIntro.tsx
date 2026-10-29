@@ -602,10 +602,10 @@ function createRealisticJCB() {
     jcb.add(fender, mudflap);
   });
 
-  // 4. Front Loader Assembly (Articulated Dogleg Arms & Clamshell Bucket in Carry Angle)
+  // 4. Front Loader Assembly (Matching Reference Diagram: Dark Loader Arms & Clamshell Bucket)
   const loaderGroup = new THREE.Group();
 
-  // Sculpted Dogleg Loader Arm Shape
+  // Sculpted Dogleg Loader Arm Shape in Dark Chassis / Black Steel (matching reference image)
   const armShape = new THREE.Shape();
   armShape.moveTo(0, 0);
   armShape.lineTo(0.25, 0.35);
@@ -624,7 +624,7 @@ function createRealisticJCB() {
     bevelSegments: 2,
   });
 
-  const armLeft = new THREE.Mesh(armGeom, jcbYellow);
+  const armLeft = new THREE.Mesh(armGeom, darkChassis);
   armLeft.position.set(0.95, 1.15, 0.72);
   armLeft.castShadow = true;
 
@@ -633,7 +633,7 @@ function createRealisticJCB() {
   armBadge.position.set(0.85, 0.28, 0.15);
   armLeft.add(armBadge);
 
-  const armRight = new THREE.Mesh(armGeom, jcbYellow);
+  const armRight = new THREE.Mesh(armGeom, darkChassis);
   armRight.position.set(0.95, 1.15, -0.86);
   armRight.castShadow = true;
   const armBadgeR = armBadge.clone();
@@ -659,10 +659,10 @@ function createRealisticJCB() {
     loaderGroup.add(barrel, rod);
   });
 
-  // Sculpted Clamshell Loader Bucket (True Construction Scoop Geometry)
+  // Sculpted Clamshell Loader Bucket in Dark Cast Steel (matching reference image)
   const bucketGroup = new THREE.Group();
   bucketGroup.position.set(2.95, 1.25, 0);
-  bucketGroup.rotation.z = 0.45; // Elevated carry posture
+  bucketGroup.rotation.z = 0.45; // Carry posture
 
   const bucketShape = new THREE.Shape();
   bucketShape.moveTo(-0.35, 0.42); // Top spill guard tip
@@ -682,12 +682,12 @@ function createRealisticJCB() {
     bevelSize: 0.02,
     bevelSegments: 2,
   });
-  const bucketMesh = new THREE.Mesh(bucketGeom, jcbYellow);
+  const bucketMesh = new THREE.Mesh(bucketGeom, darkChassis);
   bucketMesh.position.set(0, 0, -1.075);
   bucketMesh.castShadow = true;
   bucketGroup.add(bucketMesh);
 
-  // Black Top Spill Guard & Interior Wear Plate
+  // Spill Guard & Interior Wear Plate
   const spillGuard = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 2.12), blackTrim);
   spillGuard.position.set(-0.22, 0.45, 0);
   const interiorLining = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 2.05), bucketInterior);
@@ -706,7 +706,7 @@ function createRealisticJCB() {
   loaderGroup.add(armLeft, armRight, torqueTube, bucketGroup);
   jcb.add(loaderGroup);
 
-  // 5. Rear Excavator Backhoe Arm with Iconic Swan-Neck Arched Boom & "JCB 3DX" Branding!
+  // 5. Rear Excavator Backhoe Arm (Matching Reference Diagram: Arched Boom + Stick + Bucket)
   const backhoeGroup = new THREE.Group();
   backhoeGroup.position.set(-1.75, 1.1, 0);
 
@@ -750,12 +750,12 @@ function createRealisticJCB() {
   bhRod.position.set(-0.68, 1.62, 0);
   bhRod.rotation.z = 0.92;
 
-  // Dipper Arm (Stick) Folded in Roading Position
+  // Dipper Arm (Stick) - Hinged at top of Boom, extending down
   const dipperShape = new THREE.Shape();
   dipperShape.moveTo(0, 0);
   dipperShape.lineTo(-0.16, 0);
-  dipperShape.lineTo(-0.12, 1.45);
-  dipperShape.lineTo(0.08, 1.45);
+  dipperShape.lineTo(-0.12, 1.55);
+  dipperShape.lineTo(0.08, 1.55);
   dipperShape.closePath();
 
   const dipperGeom = new THREE.ExtrudeGeometry(dipperShape, {
@@ -767,15 +767,23 @@ function createRealisticJCB() {
   });
   const dipperMesh = new THREE.Mesh(dipperGeom, jcbYellow);
   dipperMesh.position.set(-0.68, 2.15, -0.1);
-  dipperMesh.rotation.z = -2.85; // Tucked down in transport lock
+  dipperMesh.rotation.z = -2.85; // Hanging downwards as shown in diagram
   dipperMesh.castShadow = true;
 
-  // Curved Excavator Digging Bucket (Curled tightly in roading position)
+  // Hydraulic Cylinder between Boom and Stick
+  const stickCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.75, 8), darkChassis);
+  stickCyl.position.set(-0.95, 1.85, 0);
+  stickCyl.rotation.z = -1.1;
+  const stickRod = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.65, 8), chromeRam);
+  stickRod.position.set(-1.18, 1.62, 0);
+  stickRod.rotation.z = -1.1;
+
+  // Curved Excavator Digging Bucket (Curled inward facing the machine as labeled in diagram)
   const bBucketShape = new THREE.Shape();
-  bBucketShape.moveTo(-0.15, 0.3);
-  bBucketShape.quadraticCurveTo(-0.4, 0.0, -0.1, -0.32);
-  bBucketShape.lineTo(0.25, -0.32);
-  bBucketShape.lineTo(0.2, 0.1);
+  bBucketShape.moveTo(-0.15, 0.32);
+  bBucketShape.quadraticCurveTo(-0.42, 0.0, -0.1, -0.34);
+  bBucketShape.lineTo(0.28, -0.34);
+  bBucketShape.lineTo(0.22, 0.1);
   bBucketShape.closePath();
 
   const bBucketGeom = new THREE.ExtrudeGeometry(bBucketShape, {
@@ -786,19 +794,19 @@ function createRealisticJCB() {
     bevelSegments: 2,
   });
   const backhoeBucket = new THREE.Mesh(bBucketGeom, darkChassis);
-  backhoeBucket.position.set(-1.42, 0.42, -0.24);
+  backhoeBucket.position.set(-1.42, 0.38, -0.24);
   backhoeBucket.rotation.z = 0.45;
   backhoeBucket.castShadow = true;
 
   // 4 Cast Digging Teeth on Backhoe Bucket
   for (let bz = -0.16; bz <= 0.18; bz += 0.11) {
     const bTooth = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.18, 4), castTeeth);
-    bTooth.position.set(-1.68, 0.2, bz);
+    bTooth.position.set(-1.68, 0.18, bz);
     bTooth.rotation.z = Math.PI / 2 + 0.45;
     backhoeGroup.add(bTooth);
   }
 
-  backhoeGroup.add(boomMesh, bhCyl, bhRod, dipperMesh, backhoeBucket);
+  backhoeGroup.add(boomMesh, bhCyl, bhRod, dipperMesh, stickCyl, stickRod, backhoeBucket);
   jcb.add(backhoeGroup);
 
   // 6. High-Detail Wheels (Front Industrial Steer + Rear Giant Earthmover with 18 Chevron Lugs)
@@ -1374,3 +1382,4 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     </div>
   );
 }
+
