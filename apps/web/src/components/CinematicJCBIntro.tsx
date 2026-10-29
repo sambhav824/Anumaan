@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import * as THREE from "three";
-import { ArrowRight, RotateCcw, Building2, HardHat, FileSpreadsheet } from "lucide-react";
+import { ArrowRight, HardHat } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 /**
@@ -1208,7 +1208,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       {/* Three.js Canvas Container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* Top Header Controls (Unobtrusive) */}
+      {/* Top Header Branding (Unobtrusive) */}
       <header className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between pointer-events-none z-20">
         <div className="flex items-center gap-3 bg-white/85 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-[#DCE4EE] shadow-sm pointer-events-auto">
           <Image
@@ -1223,18 +1223,6 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
             मिनटों में पूरा अनुमान।
           </span>
         </div>
-
-        {canSkip && (
-          <button
-            onClick={handleFinish}
-            className="pointer-events-auto px-4 py-2 bg-white/90 hover:bg-white text-[#102F57] rounded-xl text-xs font-bold border border-[#DCE4EE] shadow-sm hover:shadow transition flex items-center gap-1.5"
-          >
-            <span>Skip Intro</span>
-            <kbd className="hidden sm:inline-block text-[10px] bg-[#E8EEF5] text-[#64748B] px-1.5 py-0.5 rounded font-mono">
-              ESC
-            </kbd>
-          </button>
-        )}
       </header>
 
       {/* Sleek Non-Obtrusive Floating Dock (Revealed once JCB finishes, leaving the 3D scene fully visible!) */}
@@ -1256,15 +1244,6 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => animationResetRef.current?.()}
-                className="px-3 py-2 rounded-xl border border-[#DCE4EE] hover:bg-[#F6F8FB] text-[#64748B] hover:text-[#102F57] text-xs font-semibold flex items-center gap-1.5 transition"
-                title="Replay 3D Intro"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Replay</span>
-              </button>
-
               <button
                 onClick={handleFinish}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#F59E00] to-[#E28500] hover:from-[#E28500] hover:to-[#C97100] text-[#102F57] font-bold text-xs shadow-md hover:shadow-lg transition flex items-center gap-2 group"
