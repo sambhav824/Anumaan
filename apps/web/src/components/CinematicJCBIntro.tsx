@@ -277,50 +277,45 @@ function createJcbBoomBadgeTexture(): THREE.CanvasTexture {
 }
 
 /**
- * High-fidelity, cinematic 3D JCB 3DX EcoXpert backhoe loader.
- * Modeled strictly following real mechanical construction equipment anatomy:
- * 1. Curved Swan-Neck Arched Backhoe Boom with JCB & 3DX branding and top hydraulic cylinder
- * 2. Articulated Dipper Stick & Curled Excavator Digging Bucket with heavy cast steel teeth
- * 3. Hydraulic Outrigger Stabilizer Legs with authentic yellow ground pads
- * 4. Dogleg Curved Loader Lift Arms with genuine JCB brand plates and torque cross-tube
- * 5. Curved 4-in-1 Clamshell Loader Bucket in elevated carry posture with teeth & spill guard
- * 6. Sculpted Aerodynamic Sloping Engine Bonnet with side louvers, exhaust stack & air snorkel
- * 7. Raked Operator Cabin (18° A-pillar slope), curved roof visor canopy, panoramic glass & rearview mirrors
- * 8. Rounded-Shoulder Heavy-Duty Wheels: ribbed front steer wheels & massive rear drive wheels with 18 V-lugs
+ * High-fidelity, cinematic 3D Tracked Heavy Crawler Excavator
+ * Modeled strictly following the user's reference diagram (media_1793261026310_c5581784.png):
+ * 1. Track Groups: Dual heavy caterpillar crawler tracks, front idlers with track springs,
+ *    rear drive sprockets with final drive hubs, bottom rollers, top carrier rollers & steel track pads
+ * 2. Swing Drive & Swing Ring turntable linking undercarriage to revolving upper house
+ * 3. Engine & Superstructure: Cast counterweight at rear, engine deck with louvers, pump housing & exhaust pipe
+ * 4. Ergonomic Operator Cab: Curved panoramic glass, ROPS steel cage, interior seat & joysticks, work lights & beacon
+ * 5. Heavy Arched Mono-Boom: Iconic arched box boom in bright yellow, twin boom hydraulic cylinders & JCB decals
+ * 6. Dipper Stick & Hydraulic Cylinder: Articulated dipper arm with top hydraulic cylinder & hydraulic lines
+ * 7. Heavy Excavation Bucket with Attachments: Curved bucket with 5 cast teeth, H-linkage & quick-coupler attachment bracket
  */
 function createRealisticJCB() {
   const jcb = new THREE.Group();
 
   // Premium Construction Materials
   const jcbYellow = new THREE.MeshStandardMaterial({
-    color: 0xF59E00, // Authentic JCB 3DX golden construction yellow
+    color: 0xF59E00, // Authentic JCB industrial golden construction yellow
     roughness: 0.32,
     metalness: 0.22,
   });
   const darkChassis = new THREE.MeshStandardMaterial({
     color: 0x1A1F26,
-    roughness: 0.65,
-    metalness: 0.6,
+    roughness: 0.68,
+    metalness: 0.55,
   });
   const blackTrim = new THREE.MeshStandardMaterial({
     color: 0x12151A,
     roughness: 0.78,
     metalness: 0.25,
   });
+  const trackSteel = new THREE.MeshStandardMaterial({
+    color: 0x181A1D,
+    roughness: 0.85,
+    metalness: 0.45,
+  });
   const chromeRam = new THREE.MeshStandardMaterial({
     color: 0xF5F7FA,
     roughness: 0.05,
     metalness: 0.98,
-  });
-  const mirrorChrome = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
-    roughness: 0.02,
-    metalness: 1.0,
-  });
-  const tireRubber = new THREE.MeshStandardMaterial({
-    color: 0x141619,
-    roughness: 0.85,
-    metalness: 0.08,
   });
   const cabGlass = new THREE.MeshPhysicalMaterial({
     color: 0x142030,
@@ -341,244 +336,309 @@ function createRealisticJCB() {
     metalness: 0.55,
   });
 
-  const armBadgeTex = createJcbArmBadgeTexture();
-  const armBadgeMat = new THREE.MeshBasicMaterial({ map: armBadgeTex });
   const boomBadgeTex = createJcbBoomBadgeTexture();
   const boomBadgeMat = new THREE.MeshBasicMaterial({ map: boomBadgeTex });
 
-  // 0. Soft Ground Contact Shadow Patch
+  // 0. Soft Ground Contact Shadow Beneath Dual Tracks
   const shadowTex = createContactShadowTexture();
   const shadowMat = new THREE.MeshBasicMaterial({
     map: shadowTex,
     transparent: true,
     depthWrite: false,
   });
-  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 3.6), shadowMat);
+  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 4.2), shadowMat);
   shadowPlane.rotation.x = -Math.PI / 2;
-  shadowPlane.position.set(0.15, 0.015, 0);
+  shadowPlane.position.set(0.2, 0.015, 0);
   jcb.add(shadowPlane);
 
-  // 1. Lower Chassis & Heavy Structural Frame
-  const chassisGeom = new THREE.BoxGeometry(3.65, 0.68, 1.55);
-  const chassis = new THREE.Mesh(chassisGeom, darkChassis);
-  chassis.position.set(0, 0.92, 0);
-  chassis.castShadow = true;
-  chassis.receiveShadow = true;
-  jcb.add(chassis);
+  // 1. Undercarriage: Central Carbody & Slewing Turntable
+  const carbody = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.45, 1.8), darkChassis);
+  carbody.position.set(0, 0.68, 0);
+  carbody.castShadow = true;
+  jcb.add(carbody);
 
-  // Front Heavy Cast Iron Counterweight Bumper
-  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.6, 1.58), darkChassis);
-  bumper.position.set(1.82, 0.88, 0);
-  bumper.castShadow = true;
-  jcb.add(bumper);
+  // Slewing Ring Turntable
+  const swingRing = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.92, 0.22, 24), darkChassis);
+  swingRing.position.set(0, 0.92, 0);
+  jcb.add(swingRing);
 
-  // Side Fuel Tank & Hydraulic Reservoir
-  const fuelTank = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.95, 16), darkChassis);
-  fuelTank.rotation.z = Math.PI / 2;
-  fuelTank.position.set(0.12, 0.75, 0.86);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 8), chromeRam);
-  cap.position.set(0.42, 0.95, 0.86);
-  jcb.add(fuelTank, cap);
+  // Rotating track rollers and sprockets array
+  const wheels: { group: THREE.Group; radius: number }[] = [];
 
-  // Operator Boarding Steps & Safety Grab Rails (Left & Right)
-  [-0.92, 0.92].forEach((zSide) => {
-    const step1 = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.08, 0.28), blackTrim);
-    step1.position.set(-0.35, 0.45, zSide);
-    const step2 = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.08, 0.28), blackTrim);
-    step2.position.set(-0.35, 0.68, zSide * 0.95);
-    const grabRail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.25, 8), darkChassis);
-    grabRail.position.set(-0.68, 1.38, zSide);
-    jcb.add(step1, step2, grabRail);
-  });
+  // Helper to build heavy Caterpillar Track Groups on Left & Right
+  const makeTrackGroup = (z: number) => {
+    const trackGroup = new THREE.Group();
+    trackGroup.position.set(0, 0, z);
 
-  // Rear Heavy Outrigger Stabilizer Legs with Authentic Yellow Ground Pads
-  [-0.98, 0.98].forEach((zSide) => {
-    const jackLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.95, 12), darkChassis);
-    jackLeg.position.set(-1.48, 0.82, zSide);
-    const jackPiston = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.45, 10), chromeRam);
-    jackPiston.position.set(-1.48, 0.45, zSide);
-    const jackFoot = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.4), jcbYellow);
-    jackFoot.position.set(-1.48, 0.38, zSide);
-    jackFoot.castShadow = true;
-    jcb.add(jackLeg, jackPiston, jackFoot);
-  });
+    // Track Side Frame (Heavy Steel Beam with Angled Ramp Ends)
+    const frameShape = new THREE.Shape();
+    frameShape.moveTo(-2.25, 0.28);
+    frameShape.lineTo(-1.8, 0.85); // rear ramp up to sprocket
+    frameShape.lineTo(1.8, 0.85);  // top rail
+    frameShape.lineTo(2.25, 0.28);  // front ramp down to idler
+    frameShape.lineTo(1.9, 0.16);
+    frameShape.lineTo(-1.9, 0.16);
+    frameShape.closePath();
 
-  // 2. Sculpted Aerodynamic Engine Bonnet & Front Cowling
-  const hoodGroup = new THREE.Group();
-  hoodGroup.position.set(0.2, 0.95, 0);
+    const frameGeom = new THREE.ExtrudeGeometry(frameShape, {
+      depth: 0.58,
+      bevelEnabled: true,
+      bevelThickness: 0.03,
+      bevelSize: 0.02,
+      bevelSegments: 2,
+    });
+    const trackFrame = new THREE.Mesh(frameGeom, darkChassis);
+    trackFrame.position.set(0, 0, -0.29);
+    trackFrame.castShadow = true;
+    trackGroup.add(trackFrame);
 
-  const hoodShape = new THREE.Shape();
-  hoodShape.moveTo(0, 0);
-  hoodShape.lineTo(0, 0.85); // Back height near cab
-  hoodShape.lineTo(1.45, 0.62); // Sloping down forward
-  hoodShape.quadraticCurveTo(1.75, 0.55, 1.82, 0.35); // Curved nose
-  hoodShape.lineTo(1.82, 0);
-  hoodShape.closePath();
+    // Front Idler Wheel with Track Spring & Recoil Tensioner
+    const idlerGroup = new THREE.Group();
+    idlerGroup.position.set(1.85, 0.48, 0);
+    const idlerWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.52, 20), trackSteel);
+    idlerWheel.rotation.x = Math.PI / 2;
+    idlerWheel.castShadow = true;
+    const idlerHub = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.56, 12), darkChassis);
+    idlerHub.rotation.x = Math.PI / 2;
+    idlerGroup.add(idlerWheel, idlerHub);
+    trackGroup.add(idlerGroup);
+    wheels.push({ group: idlerGroup, radius: 0.42 });
 
-  const hoodGeom = new THREE.ExtrudeGeometry(hoodShape, {
-    depth: 1.42,
+    // Track Spring Tensioner Cylinder behind Front Idler
+    const springTensioner = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.65, 10), darkChassis);
+    springTensioner.rotation.z = Math.PI / 2;
+    springTensioner.position.set(1.35, 0.48, 0);
+    trackGroup.add(springTensioner);
+
+    // Rear Drive Sprocket with Final Drive Gearbox Hub & Travel Motor
+    const sprocketGroup = new THREE.Group();
+    sprocketGroup.position.set(-1.85, 0.48, 0);
+    const sprocketWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.52, 18), trackSteel);
+    sprocketWheel.rotation.x = Math.PI / 2;
+    sprocketWheel.castShadow = true;
+
+    // Sprocket Teeth along Outer Perimeter
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.5), trackSteel);
+      tooth.position.set(Math.cos(a) * 0.44, Math.sin(a) * 0.44, 0);
+      tooth.rotation.z = a;
+      sprocketGroup.add(tooth);
+    }
+
+    // Heavy Final Drive Hub Cap
+    const finalDriveCap = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.58, 14), darkChassis);
+    finalDriveCap.rotation.x = Math.PI / 2;
+    sprocketGroup.add(sprocketWheel, finalDriveCap);
+    trackGroup.add(sprocketGroup);
+    wheels.push({ group: sprocketGroup, radius: 0.42 });
+
+    // 7 Bottom Track Rollers Supporting Machine Weight
+    for (let r = 0; r < 7; r++) {
+      const rx = -1.35 + r * 0.45;
+      const rollerGroup = new THREE.Group();
+      rollerGroup.position.set(rx, 0.24, 0);
+      const roller = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.48, 12), trackSteel);
+      roller.rotation.x = Math.PI / 2;
+      rollerGroup.add(roller);
+      trackGroup.add(rollerGroup);
+      wheels.push({ group: rollerGroup, radius: 0.16 });
+    }
+
+    // 2 Top Carrier Rollers
+    [-0.65, 0.65].forEach((cx) => {
+      const carrierGroup = new THREE.Group();
+      carrierGroup.position.set(cx, 0.82, 0);
+      const carrier = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.48, 10), trackSteel);
+      carrier.rotation.x = Math.PI / 2;
+      carrierGroup.add(carrier);
+      trackGroup.add(carrierGroup);
+      wheels.push({ group: carrierGroup, radius: 0.12 });
+    });
+
+    // Continuous Caterpillar Track Belt with Grousers (Steel Track Pads)
+    // Bottom track run (touching ground)
+    const bottomTrack = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.08, 0.62), trackSteel);
+    bottomTrack.position.set(0, 0.05, 0);
+    bottomTrack.receiveShadow = true;
+
+    // Top track run
+    const topTrack = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 0.62), trackSteel);
+    topTrack.position.set(0, 0.92, 0);
+    topTrack.castShadow = true;
+
+    // Angled front track wrap
+    const frontWrap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.62), trackSteel);
+    frontWrap.position.set(2.05, 0.48, 0);
+    frontWrap.rotation.z = -Math.PI / 3;
+
+    // Angled rear track wrap
+    const rearWrap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.62), trackSteel);
+    rearWrap.position.set(-2.05, 0.48, 0);
+    rearWrap.rotation.z = Math.PI / 3;
+
+    trackGroup.add(bottomTrack, topTrack, frontWrap, rearWrap);
+
+    // Track Shoe Cleats / Grousers along Ground Run
+    for (let g = -1.8; g <= 1.85; g += 0.22) {
+      const grouser = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.035, 0.64), blackTrim);
+      grouser.position.set(g, 0.02, 0);
+      trackGroup.add(grouser);
+    }
+
+    jcb.add(trackGroup);
+  };
+
+  makeTrackGroup(1.18);
+  makeTrackGroup(-1.18);
+
+  // 2. Revolving Upper Superstructure (House / Engine / Pumps / Counterweight)
+  const houseGroup = new THREE.Group();
+  houseGroup.position.set(0, 1.05, 0);
+
+  // Revolving Main Deck Baseplate
+  const deckPlate = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.22, 2.7), darkChassis);
+  deckPlate.position.set(-0.25, 0.11, 0);
+  deckPlate.castShadow = true;
+  houseGroup.add(deckPlate);
+
+  // Heavy Cast Counterweight at Rear
+  const cwShape = new THREE.Shape();
+  cwShape.moveTo(0, 0);
+  cwShape.lineTo(0, 1.35);
+  cwShape.lineTo(-0.75, 1.35);
+  cwShape.quadraticCurveTo(-1.3, 0.95, -1.35, 0.35); // rounded rear profile
+  cwShape.lineTo(-1.35, 0);
+  cwShape.closePath();
+
+  const cwGeom = new THREE.ExtrudeGeometry(cwShape, {
+    depth: 2.68,
     bevelEnabled: true,
     bevelThickness: 0.04,
     bevelSize: 0.03,
     bevelSegments: 3,
   });
-  const hoodMesh = new THREE.Mesh(hoodGeom, jcbYellow);
-  hoodMesh.position.set(0, 0, -0.71);
-  hoodMesh.castShadow = true;
-  hoodGroup.add(hoodMesh);
+  const counterweight = new THREE.Mesh(cwGeom, jcbYellow);
+  counterweight.position.set(-1.15, 0.22, -1.34);
+  counterweight.castShadow = true;
+  houseGroup.add(counterweight);
 
-  // Black Lower Intake Louver Grille
-  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.48, 1.25), blackTrim);
-  grille.position.set(1.84, 0.26, 0);
-  hoodGroup.add(grille);
+  // Black Lower Rear Inset Bumper & Safety Reflectors
+  const cwBumper = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.35, 2.65), darkChassis);
+  cwBumper.position.set(-2.38, 0.38, 0);
+  houseGroup.add(cwBumper);
 
-  // Dual Rectangular Headlights + Amber Turn Indicators
-  const hlMat = new THREE.MeshStandardMaterial({
-    color: 0xFFFFEE,
-    emissive: 0xFFE599,
-    emissiveIntensity: 2.2,
-  });
-  const indMat = new THREE.MeshStandardMaterial({
-    color: 0xF59E0B,
-    emissive: 0xD97706,
-    emissiveIntensity: 1.5,
-  });
-  [-0.48, 0.48].forEach((zSide) => {
-    const hlHousing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.26), darkChassis);
-    hlHousing.position.set(1.78, 0.38, zSide);
-    const hlLens = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.14, 0.22), hlMat);
-    hlLens.position.set(1.82, 0.38, zSide);
-    const indLens = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.1, 0.1), indMat);
-    indLens.position.set(1.82, 0.38, zSide + (zSide > 0 ? 0.18 : -0.18));
-    hoodGroup.add(hlHousing, hlLens, indLens);
-  });
+  // Engine Compartment & Hydraulic Pump Cowling (Center & Right Side)
+  const engineHood = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.95, 1.55), jcbYellow);
+  engineHood.position.set(-0.25, 0.72, -0.55);
+  engineHood.castShadow = true;
+  houseGroup.add(engineHood);
 
-  // Vertical Exhaust Stack with Rain Flap
-  const exhaustGroup = new THREE.Group();
-  exhaustGroup.position.set(0.3, 1.2, 0.68);
-  const exhaustPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.45, 12), darkChassis);
-  const exhaustGuard = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.95, 12), castTeeth);
-  exhaustGuard.position.y = -0.15;
-  const exhaustFlap = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.02, 0.09), chromeRam);
-  exhaustFlap.position.set(0, 0.74, 0);
-  exhaustFlap.rotation.z = 0.35;
-  exhaustGroup.add(exhaustPipe, exhaustGuard, exhaustFlap);
-  hoodGroup.add(exhaustGroup);
+  // Engine Hood Ventilation Louvers (Black Inset Grilles)
+  const louver1 = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.05, 1.25), blackTrim);
+  louver1.position.set(-0.25, 1.21, -0.55);
+  houseGroup.add(louver1);
 
-  // Cyclone Pre-Cleaner Air Snorkel
-  const snorkel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.25, 10), darkChassis);
-  snorkel.position.set(0.3, 1.1, -0.68);
-  const preCleanerBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.07, 0.18, 12), darkChassis);
-  preCleanerBowl.position.set(0.3, 1.75, -0.68);
-  hoodGroup.add(snorkel, preCleanerBowl);
+  // Tall Vertical Exhaust Pipe & Rain Flap (Engine Exhaust)
+  const exhaustPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.95, 12), darkChassis);
+  exhaustPipe.position.set(-1.05, 1.65, -0.75);
+  const exhaustCap = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.025, 0.09), chromeRam);
+  exhaustCap.position.set(-1.05, 2.14, -0.75);
+  exhaustCap.rotation.z = 0.35;
+  houseGroup.add(exhaustPipe, exhaustCap);
 
-  jcb.add(hoodGroup);
+  // Hydraulic Main Control Valve Compartment (Right Side Cowling)
+  const valveHousing = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.82, 0.65), jcbYellow);
+  valveHousing.position.set(0.65, 0.65, -0.98);
+  valveHousing.castShadow = true;
+  houseGroup.add(valveHousing);
 
-  // 3. Raked Operator Cabin with Panoramic Glass & Forward Visor Overhang
+  // 3. Ergonomic Operator Cab (Front-Left Superstructure)
   const cabGroup = new THREE.Group();
-  cabGroup.position.set(-0.52, 1.35, 0);
+  cabGroup.position.set(0.35, 0.22, 0.78);
 
-  // Sculpted Raked Cabin Shell Profile (Windscreen leans back at 18 degrees!)
+  // Raked Panoramic Glass Shell
   const cabShape = new THREE.Shape();
-  cabShape.moveTo(-0.75, 0);
-  cabShape.lineTo(0.72, 0);
-  cabShape.lineTo(0.35, 1.54); // Windscreen slope
-  cabShape.lineTo(-0.75, 1.54);
+  cabShape.moveTo(-0.85, 0);
+  cabShape.lineTo(0.95, 0);
+  cabShape.lineTo(0.72, 1.48); // Windscreen slope
+  cabShape.lineTo(-0.85, 1.48);
   cabShape.closePath();
 
   const cabGlassGeom = new THREE.ExtrudeGeometry(cabShape, {
-    depth: 1.32,
+    depth: 1.05,
     bevelEnabled: true,
     bevelThickness: 0.03,
     bevelSize: 0.02,
     bevelSegments: 2,
   });
   const glassMesh = new THREE.Mesh(cabGlassGeom, cabGlass);
-  glassMesh.position.set(0, 0, -0.66);
+  glassMesh.position.set(0, 0, -0.525);
   cabGroup.add(glassMesh);
 
-  // 6 Structural Roll-Cage Steel Pillars along Raked Profile
-  const pMat = darkChassis;
-  const makePillar = (x1: number, y1: number, x2: number, y2: number, z: number) => {
+  // ROPS Structural Steel Pillars
+  const makeCabPillar = (x1: number, y1: number, x2: number, y2: number, z: number) => {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const len = Math.sqrt(dx * dx + dy * dy);
-    const pGeom = new THREE.CylinderGeometry(0.038, 0.038, len, 8);
-    const pMesh = new THREE.Mesh(pGeom, pMat);
+    const pMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, len, 8), darkChassis);
     pMesh.position.set((x1 + x2) / 2, (y1 + y2) / 2, z);
     pMesh.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
     pMesh.castShadow = true;
     cabGroup.add(pMesh);
   };
 
-  [-0.66, 0.66].forEach((zSide) => {
-    // Front Raked A-Pillar
-    makePillar(0.72, 0, 0.35, 1.54, zSide);
-    // Middle B-Pillar
-    makePillar(-0.02, 0, -0.15, 1.54, zSide);
-    // Rear C-Pillar
-    makePillar(-0.75, 0, -0.75, 1.54, zSide);
+  [-0.52, 0.52].forEach((zSide) => {
+    makeCabPillar(0.95, 0, 0.72, 1.48, zSide);  // A-Pillar
+    makeCabPillar(0.05, 0, -0.05, 1.48, zSide);  // B-Pillar
+    makeCabPillar(-0.85, 0, -0.85, 1.48, zSide); // C-Pillar
   });
 
   // Sculpted Yellow Roof Canopy with Visor Overhang
   const roofShape = new THREE.Shape();
-  roofShape.moveTo(-0.85, 0);
-  roofShape.lineTo(0.58, 0);
-  roofShape.lineTo(0.55, 0.12);
-  roofShape.lineTo(-0.85, 0.12);
+  roofShape.moveTo(-0.92, 0);
+  roofShape.lineTo(0.85, 0); // Visor overhang
+  roofShape.lineTo(0.82, 0.12);
+  roofShape.lineTo(-0.92, 0.12);
   roofShape.closePath();
 
   const roofGeom = new THREE.ExtrudeGeometry(roofShape, {
-    depth: 1.42,
+    depth: 1.15,
     bevelEnabled: true,
     bevelThickness: 0.03,
     bevelSize: 0.02,
     bevelSegments: 2,
   });
   const roofMesh = new THREE.Mesh(roofGeom, jcbYellow);
-  roofMesh.position.set(0, 1.54, -0.71);
+  roofMesh.position.set(0, 1.48, -0.575);
   roofMesh.castShadow = true;
   cabGroup.add(roofMesh);
 
-  // Roof Work Floodlights
+  // Dual Rooftop Work Lights
   const workLightMat = new THREE.MeshStandardMaterial({
     color: 0xEEF5FF,
     emissive: 0xCCE3F5,
-    emissiveIntensity: 1.5,
+    emissiveIntensity: 1.6,
   });
-  [-0.45, 0.45].forEach((zSide) => {
-    const fLamp = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.15), workLightMat);
-    fLamp.position.set(0.5, 1.52, zSide);
-    const rLamp = fLamp.clone();
-    rLamp.position.x = -0.84;
-    cabGroup.add(fLamp, rLamp);
+  [-0.35, 0.35].forEach((zSide) => {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.14), workLightMat);
+    lamp.position.set(0.8, 1.45, zSide);
+    cabGroup.add(lamp);
   });
 
-  // Tall Exterior Rearview Mirrors on Curved Stalks
-  [-0.82, 0.82].forEach((zSide) => {
-    const mirrorStem = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.6, 6), darkChassis);
-    mirrorStem.rotation.x = zSide > 0 ? -0.48 : 0.48;
-    mirrorStem.rotation.z = -0.22;
-    mirrorStem.position.set(0.48, 1.15, zSide * 0.9);
-    const mirrorHead = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.35, 0.2), darkChassis);
-    mirrorHead.position.set(0.46, 1.42, zSide);
-    const mirrorFace = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.32), mirrorChrome);
-    mirrorFace.rotation.y = -Math.PI / 2;
-    mirrorFace.position.set(0.49, 1.42, zSide);
-    cabGroup.add(mirrorStem, mirrorHead, mirrorFace);
-  });
-
-  // Interior Seat & Steering Wheel
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.44), blackTrim);
-  seat.position.set(-0.25, 0.42, 0);
-  const steeringPost = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 8), darkChassis);
-  steeringPost.position.set(0.25, 0.55, 0);
-  steeringPost.rotation.z = -0.42;
-  const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.022, 8, 16), blackTrim);
-  wheelRim.position.set(0.12, 0.82, 0);
-  wheelRim.rotation.y = Math.PI / 2;
-  wheelRim.rotation.x = -0.42;
-  cabGroup.add(seat, steeringPost, wheelRim);
+  // Operator Interior: Contoured Seat & Pilot Control Joysticks
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.65, 0.46), blackTrim);
+  seat.position.set(-0.25, 0.45, 0);
+  const consoleL = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.35, 0.14), darkChassis);
+  consoleL.position.set(0.1, 0.42, 0.28);
+  const consoleR = consoleL.clone();
+  consoleR.position.z = -0.28;
+  const joystickL = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6), chromeRam);
+  joystickL.position.set(0.18, 0.65, 0.28);
+  joystickL.rotation.z = -0.2;
+  const joystickR = joystickL.clone();
+  joystickR.position.z = -0.28;
+  cabGroup.add(seat, consoleL, consoleR, joystickL, joystickR);
 
   // Amber Rotating Warning Beacon
   const beaconMat = new THREE.MeshStandardMaterial({
@@ -587,322 +647,159 @@ function createRealisticJCB() {
     emissiveIntensity: 2.4,
   });
   const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.2, 12), beaconMat);
-  beacon.position.set(-0.2, 1.76, 0.38);
+  beacon.position.set(-0.35, 1.7, 0.35);
   cabGroup.add(beacon);
 
-  jcb.add(cabGroup);
+  houseGroup.add(cabGroup);
+  jcb.add(houseGroup);
 
-  // Rear Mudguards & Heavy Mudflaps
-  [-0.95, 0.95].forEach((zSide) => {
-    const fender = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.14, 0.46), jcbYellow);
-    fender.position.set(-0.95, 1.58, zSide);
-    fender.castShadow = true;
-    const mudflap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.48, 0.42), blackTrim);
-    mudflap.position.set(-1.82, 1.25, zSide);
-    jcb.add(fender, mudflap);
+  // 4. Heavy Excavator Boom & Hydraulic Lift Cylinders
+  const boomGroup = new THREE.Group();
+  boomGroup.position.set(0.9, 1.45, -0.05);
+
+  // Iconic Arched Mono-Boom Profile (Curved Swan-Neck Arched Box Boom)
+  const boomShape = new THREE.Shape();
+  boomShape.moveTo(0, 0); // Boom base pivot
+  boomShape.lineTo(0.2, 0.42);
+  boomShape.quadraticCurveTo(0.85, 1.75, 2.2, 1.42); // Arched crest curve
+  boomShape.lineTo(2.95, 0.95); // Boom apex / dipper pivot
+  boomShape.lineTo(2.85, 0.65);
+  boomShape.quadraticCurveTo(0.95, 1.25, 0.35, 0.05); // Underside inner belly
+  boomShape.closePath();
+
+  const boomGeom = new THREE.ExtrudeGeometry(boomShape, {
+    depth: 0.38,
+    bevelEnabled: true,
+    bevelThickness: 0.035,
+    bevelSize: 0.025,
+    bevelSegments: 3,
+  });
+  const boomMesh = new THREE.Mesh(boomGeom, jcbYellow);
+  boomMesh.position.set(0, 0, -0.19);
+  boomMesh.castShadow = true;
+  boomGroup.add(boomMesh);
+
+  // Authentic "JCB" Logo Badge on Both Flanks of Boom
+  const boomBadgeL = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.85), boomBadgeMat);
+  boomBadgeL.position.set(1.4, 1.28, 0.2);
+  boomBadgeL.rotation.z = Math.PI / 2;
+  const boomBadgeR = boomBadgeL.clone();
+  boomBadgeR.position.z = -0.2;
+  boomBadgeR.rotation.y = Math.PI;
+  boomMesh.add(boomBadgeL, boomBadgeR);
+
+  // Twin Hydraulic Boom Lift Cylinders (Extending from house to boom belly)
+  [-0.24, 0.24].forEach((zSide) => {
+    const cylBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 1.15, 10), darkChassis);
+    cylBarrel.position.set(0.25, 0.35, zSide);
+    cylBarrel.rotation.z = -0.75;
+    const cylRod = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.95, 10), chromeRam);
+    cylRod.position.set(0.65, 0.72, zSide);
+    cylRod.rotation.z = -0.75;
+    boomGroup.add(cylBarrel, cylRod);
   });
 
-  // 4. Front Loader Assembly (Matching Reference Diagram: Dark Loader Arms & Clamshell Bucket)
-  const loaderGroup = new THREE.Group();
+  // Stick Hydraulic Cylinder (Mounted along top spine of boom)
+  const stickCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 1.25, 10), darkChassis);
+  stickCyl.position.set(1.45, 1.68, 0);
+  stickCyl.rotation.z = 0.38;
+  const stickRod = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 1.05, 10), chromeRam);
+  stickRod.position.set(2.05, 1.45, 0);
+  stickRod.rotation.z = 0.38;
+  boomGroup.add(stickCyl, stickRod);
 
-  // Sculpted Dogleg Loader Arm Shape in Dark Chassis / Black Steel (matching reference image)
-  const armShape = new THREE.Shape();
-  armShape.moveTo(0, 0);
-  armShape.lineTo(0.25, 0.35);
-  armShape.lineTo(1.45, 0.38);
-  armShape.lineTo(2.05, 0.05);
-  armShape.lineTo(1.98, -0.12);
-  armShape.lineTo(1.4, 0.18);
-  armShape.lineTo(0.2, 0.15);
-  armShape.closePath();
+  // Black Hydraulic Fluid Lines along Boom Spine
+  const hydLine = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 2.5, 6), blackTrim);
+  hydLine.position.set(1.4, 1.45, 0.18);
+  hydLine.rotation.z = -0.32;
+  boomGroup.add(hydLine);
 
-  const armGeom = new THREE.ExtrudeGeometry(armShape, {
-    depth: 0.14,
+  // 5. Dipper Stick (Arm) - Articulated from Boom Apex
+  const stickGroup = new THREE.Group();
+  stickGroup.position.set(2.9, 0.85, 0);
+
+  // Dipper Arm Profile (Tapered Yellow Box Beam)
+  const stickShape = new THREE.Shape();
+  stickShape.moveTo(0, 0);
+  stickShape.lineTo(0.24, 0.22);
+  stickShape.lineTo(1.85, -0.65); // Down to bucket pivot
+  stickShape.lineTo(1.72, -0.88);
+  stickShape.lineTo(-0.08, -0.22);
+  stickShape.closePath();
+
+  const stickGeom = new THREE.ExtrudeGeometry(stickShape, {
+    depth: 0.28,
     bevelEnabled: true,
     bevelThickness: 0.025,
     bevelSize: 0.02,
     bevelSegments: 2,
   });
+  const stickMesh = new THREE.Mesh(stickGeom, jcbYellow);
+  stickMesh.position.set(0, 0, -0.14);
+  stickMesh.castShadow = true;
+  stickGroup.add(stickMesh);
 
-  const armLeft = new THREE.Mesh(armGeom, darkChassis);
-  armLeft.position.set(0.95, 1.15, 0.72);
-  armLeft.castShadow = true;
+  // Bucket Hydraulic Cylinder mounted on stick
+  const bCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.95, 10), darkChassis);
+  bCyl.position.set(0.72, -0.05, 0);
+  bCyl.rotation.z = 0.45;
+  const bRod = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.75, 10), chromeRam);
+  bRod.position.set(1.15, -0.25, 0);
+  bRod.rotation.z = 0.45;
+  stickGroup.add(bCyl, bRod);
 
-  // Authentic "JCB" Logo Badge on Loader Arm
-  const armBadge = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.22), armBadgeMat);
-  armBadge.position.set(0.85, 0.28, 0.15);
-  armLeft.add(armBadge);
+  // Heavy Attachment Bracket / Quick-Coupler (as labeled in diagram)
+  const attachBracket = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.32), darkChassis);
+  attachBracket.position.set(1.65, -0.72, 0);
+  stickGroup.add(attachBracket);
 
-  const armRight = new THREE.Mesh(armGeom, darkChassis);
-  armRight.position.set(0.95, 1.15, -0.86);
-  armRight.castShadow = true;
-  const armBadgeR = armBadge.clone();
-  armBadgeR.position.z = -0.01;
-  armBadgeR.rotation.y = Math.PI;
-  armRight.add(armBadgeR);
+  // H-Linkage Dogbone Connecting Cylinder to Bucket
+  const linkH = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.08, 0.24), darkChassis);
+  linkH.position.set(1.42, -0.48, 0);
+  linkH.rotation.z = -0.55;
+  stickGroup.add(linkH);
 
-  // Heavy Cross-Torque Structural Tube
-  const torqueTube = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.58, 12), darkChassis);
-  torqueTube.position.set(2.2, 1.48, 0);
-  torqueTube.rotation.x = Math.PI / 2;
-
-  // Hydraulic Lift Rams
-  const cylGeom = new THREE.CylinderGeometry(0.058, 0.058, 1.05, 10);
-  const rodGeom = new THREE.CylinderGeometry(0.032, 0.032, 0.95, 10);
-  [-0.66, 0.66].forEach((zSide) => {
-    const barrel = new THREE.Mesh(cylGeom, darkChassis);
-    barrel.position.set(1.35, 1.15, zSide);
-    barrel.rotation.z = 0.65;
-    const rod = new THREE.Mesh(rodGeom, chromeRam);
-    rod.position.set(1.78, 1.42, zSide);
-    rod.rotation.z = 0.65;
-    loaderGroup.add(barrel, rod);
-  });
-
-  // Sculpted Clamshell Loader Bucket in Dark Cast Steel (matching reference image)
+  // 6. Heavy Excavation Digging Bucket (Curved High-Capacity Earth Scoop)
   const bucketGroup = new THREE.Group();
-  bucketGroup.position.set(2.95, 1.25, 0);
-  bucketGroup.rotation.z = 0.45; // Carry posture
+  bucketGroup.position.set(1.82, -0.82, 0);
+  bucketGroup.rotation.z = 0.28; // Elevated carry posture
 
   const bucketShape = new THREE.Shape();
-  bucketShape.moveTo(-0.35, 0.42); // Top spill guard tip
-  bucketShape.lineTo(-0.25, 0.42);
-  bucketShape.lineTo(-0.15, 0.2);
-  bucketShape.quadraticCurveTo(-0.32, -0.22, 0.18, -0.32); // Curved bottom
-  bucketShape.lineTo(0.52, -0.32); // Front cutting lip
-  bucketShape.lineTo(0.52, -0.38);
-  bucketShape.lineTo(-0.28, -0.38);
-  bucketShape.quadraticCurveTo(-0.42, -0.24, -0.35, 0.42);
+  bucketShape.moveTo(-0.1, 0.42); // Upper pin mount
+  bucketShape.lineTo(0.12, 0.42);
+  bucketShape.quadraticCurveTo(0.65, 0.12, 0.72, -0.45); // Curved back & floor
+  bucketShape.lineTo(0.15, -0.52); // Cutting lip
+  bucketShape.lineTo(-0.35, -0.22);
+  bucketShape.quadraticCurveTo(-0.45, 0.15, -0.1, 0.42);
   bucketShape.closePath();
 
   const bucketGeom = new THREE.ExtrudeGeometry(bucketShape, {
-    depth: 2.15,
+    depth: 1.15,
     bevelEnabled: true,
     bevelThickness: 0.03,
     bevelSize: 0.02,
     bevelSegments: 2,
   });
-  const bucketMesh = new THREE.Mesh(bucketGeom, darkChassis);
-  bucketMesh.position.set(0, 0, -1.075);
-  bucketMesh.castShadow = true;
-  bucketGroup.add(bucketMesh);
+  const bucketExterior = new THREE.Mesh(bucketGeom, jcbYellow);
+  bucketExterior.position.set(0, 0, -0.575);
+  bucketExterior.castShadow = true;
 
-  // Spill Guard & Interior Wear Plate
-  const spillGuard = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 2.12), blackTrim);
-  spillGuard.position.set(-0.22, 0.45, 0);
-  const interiorLining = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 2.05), bucketInterior);
-  interiorLining.position.set(-0.05, 0.02, 0);
-  bucketGroup.add(spillGuard, interiorLining);
+  const bucketLining = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 1.08), bucketInterior);
+  bucketLining.position.set(0.18, -0.1, 0);
+  bucketGroup.add(bucketExterior, bucketLining);
 
-  // 6 Cast-Steel Digging Teeth along Front Cutting Lip
-  for (let z = -0.92; z <= 0.95; z += 0.37) {
-    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.22, 4), castTeeth);
-    tooth.position.set(0.62, -0.35, z);
-    tooth.rotation.z = -Math.PI / 2;
+  // 5 Heavy Cast-Steel Digging Teeth along Front Cutting Edge
+  for (let z = -0.44; z <= 0.48; z += 0.22) {
+    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.22, 4), castTeeth);
+    tooth.position.set(0.12, -0.58, z);
+    tooth.rotation.z = Math.PI / 2 + 0.35;
     tooth.castShadow = true;
     bucketGroup.add(tooth);
   }
 
-  loaderGroup.add(armLeft, armRight, torqueTube, bucketGroup);
-  jcb.add(loaderGroup);
-
-  // 5. Rear Excavator Backhoe Arm (Matching Reference Diagram: Arched Boom + Stick + Bucket)
-  const backhoeGroup = new THREE.Group();
-  backhoeGroup.position.set(-1.75, 1.1, 0);
-
-  // Heavy Kingpost Swivel Tower
-  const kingpost = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.78, 0.58), jcbYellow);
-  backhoeGroup.add(kingpost);
-
-  // Iconic Swan-Neck Arched Boom Profile (Modeled directly from reference image)
-  const boomShape = new THREE.Shape();
-  boomShape.moveTo(0, 0); // Kingpost pivot
-  boomShape.quadraticCurveTo(-0.42, 1.15, -0.85, 2.15); // Outer arched curve
-  boomShape.lineTo(-0.62, 2.26); // Crown tip
-  boomShape.quadraticCurveTo(-0.18, 1.32, 0.22, 0.12); // Inner underside curve
-  boomShape.closePath();
-
-  const boomGeom = new THREE.ExtrudeGeometry(boomShape, {
-    depth: 0.24,
-    bevelEnabled: true,
-    bevelThickness: 0.03,
-    bevelSize: 0.02,
-    bevelSegments: 3,
-  });
-  const boomMesh = new THREE.Mesh(boomGeom, jcbYellow);
-  boomMesh.position.set(0, 0, -0.12);
-  boomMesh.castShadow = true;
-
-  // Authentic "JCB" Vertical Decal & "3DX" Badge on Boom Side!
-  const boomBadgeL = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.75), boomBadgeMat);
-  boomBadgeL.position.set(-0.45, 1.18, 0.13);
-  boomBadgeL.rotation.z = Math.PI / 2;
-  const boomBadgeR = boomBadgeL.clone();
-  boomBadgeR.position.z = -0.13;
-  boomBadgeR.rotation.y = Math.PI;
-  boomMesh.add(boomBadgeL, boomBadgeR);
-
-  // Hydraulic Ram Cylinder along Top Spine of Arched Boom
-  const bhCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.95, 10), darkChassis);
-  bhCyl.position.set(-0.35, 1.25, 0);
-  bhCyl.rotation.z = 0.92;
-  const bhRod = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.85, 8), chromeRam);
-  bhRod.position.set(-0.68, 1.62, 0);
-  bhRod.rotation.z = 0.92;
-
-  // Dipper Arm (Stick) - Hinged at top of Boom, extending down
-  const dipperShape = new THREE.Shape();
-  dipperShape.moveTo(0, 0);
-  dipperShape.lineTo(-0.16, 0);
-  dipperShape.lineTo(-0.12, 1.55);
-  dipperShape.lineTo(0.08, 1.55);
-  dipperShape.closePath();
-
-  const dipperGeom = new THREE.ExtrudeGeometry(dipperShape, {
-    depth: 0.2,
-    bevelEnabled: true,
-    bevelThickness: 0.025,
-    bevelSize: 0.02,
-    bevelSegments: 2,
-  });
-  const dipperMesh = new THREE.Mesh(dipperGeom, jcbYellow);
-  dipperMesh.position.set(-0.68, 2.15, -0.1);
-  dipperMesh.rotation.z = -2.85; // Hanging downwards as shown in diagram
-  dipperMesh.castShadow = true;
-
-  // Hydraulic Cylinder between Boom and Stick
-  const stickCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.75, 8), darkChassis);
-  stickCyl.position.set(-0.95, 1.85, 0);
-  stickCyl.rotation.z = -1.1;
-  const stickRod = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.65, 8), chromeRam);
-  stickRod.position.set(-1.18, 1.62, 0);
-  stickRod.rotation.z = -1.1;
-
-  // Curved Excavator Digging Bucket (Curled inward facing the machine as labeled in diagram)
-  const bBucketShape = new THREE.Shape();
-  bBucketShape.moveTo(-0.15, 0.32);
-  bBucketShape.quadraticCurveTo(-0.42, 0.0, -0.1, -0.34);
-  bBucketShape.lineTo(0.28, -0.34);
-  bBucketShape.lineTo(0.22, 0.1);
-  bBucketShape.closePath();
-
-  const bBucketGeom = new THREE.ExtrudeGeometry(bBucketShape, {
-    depth: 0.48,
-    bevelEnabled: true,
-    bevelThickness: 0.025,
-    bevelSize: 0.02,
-    bevelSegments: 2,
-  });
-  const backhoeBucket = new THREE.Mesh(bBucketGeom, darkChassis);
-  backhoeBucket.position.set(-1.42, 0.38, -0.24);
-  backhoeBucket.rotation.z = 0.45;
-  backhoeBucket.castShadow = true;
-
-  // 4 Cast Digging Teeth on Backhoe Bucket
-  for (let bz = -0.16; bz <= 0.18; bz += 0.11) {
-    const bTooth = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.18, 4), castTeeth);
-    bTooth.position.set(-1.68, 0.18, bz);
-    bTooth.rotation.z = Math.PI / 2 + 0.45;
-    backhoeGroup.add(bTooth);
-  }
-
-  backhoeGroup.add(boomMesh, bhCyl, bhRod, dipperMesh, stickCyl, stickRod, backhoeBucket);
-  jcb.add(backhoeGroup);
-
-  // 6. High-Detail Wheels (Front Industrial Steer + Rear Giant Earthmover with 18 Chevron Lugs)
-  const wheels: { group: THREE.Group; radius: number }[] = [];
-
-  // Front Steer Wheel (Radius 0.45m, Width 0.36m, Ribbed Industrial Tread)
-  const makeFrontWheel = (z: number) => {
-    const wg = new THREE.Group();
-    wg.position.set(1.15, 0.45, z);
-
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.36, 24), tireRubber);
-    tire.rotation.x = Math.PI / 2;
-    tire.castShadow = true;
-
-    // Rounded Tire Shoulders
-    [-0.17, 0.17].forEach((sideZ) => {
-      const shoulder = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.07, 10, 24), tireRubber);
-      shoulder.position.z = sideZ;
-      wg.add(shoulder);
-    });
-
-    // Deep Yellow Rim with Recessed Center
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 18), jcbYellow);
-    rim.rotation.x = Math.PI / 2;
-
-    // Dark Central Planetary Hub & 6 Wheel Hex Lug Nuts
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.39, 12), darkChassis);
-    hub.rotation.x = Math.PI / 2;
-
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.025, 6), darkChassis);
-      nut.rotation.x = Math.PI / 2;
-      nut.position.set(Math.cos(a) * 0.18, Math.sin(a) * 0.18, 0.19 * (z > 0 ? 1 : -1));
-      wg.add(nut);
-    }
-
-    wg.add(tire, rim, hub);
-    jcb.add(wg);
-    wheels.push({ group: wg, radius: 0.45 });
-  };
-
-  // Rear Heavy Drive Wheel (Radius 0.76m, Width 0.56m, 18 Pairs of Directional Chevron V-Lugs!)
-  const makeRearWheel = (z: number) => {
-    const wg = new THREE.Group();
-    wg.position.set(-0.95, 0.76, z);
-
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.74, 0.56, 32), tireRubber);
-    tire.rotation.x = Math.PI / 2;
-    tire.castShadow = true;
-
-    // Rounded Tire Shoulders
-    [-0.26, 0.26].forEach((sideZ) => {
-      const shoulder = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.1, 12, 32), tireRubber);
-      shoulder.position.z = sideZ;
-      wg.add(shoulder);
-    });
-
-    // Deep-Dish Yellow Rim
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.57, 24), jcbYellow);
-    rim.rotation.x = Math.PI / 2;
-
-    // Planetary Gear Hub
-    const planetary = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.61, 14), darkChassis);
-    planetary.rotation.x = Math.PI / 2;
-
-    wg.add(tire, rim, planetary);
-
-    // 18 Pairs of Directional Chevron Lugs in V-Pattern
-    const lugGeom = new THREE.BoxGeometry(0.18, 0.065, 0.24);
-    for (let i = 0; i < 18; i++) {
-      const angle = (i / 18) * Math.PI * 2;
-      const lx = Math.cos(angle) * 0.77;
-      const ly = Math.sin(angle) * 0.77;
-
-      const lugL = new THREE.Mesh(lugGeom, tireRubber);
-      lugL.position.set(lx, ly, -0.12);
-      lugL.rotation.z = angle;
-      lugL.rotation.y = 0.42;
-
-      const lugR = new THREE.Mesh(lugGeom, tireRubber);
-      lugR.position.set(lx, ly, 0.12);
-      lugR.rotation.z = angle;
-      lugR.rotation.y = -0.42;
-
-      wg.add(lugL, lugR);
-    }
-
-    jcb.add(wg);
-    wheels.push({ group: wg, radius: 0.76 });
-  };
-
-  makeFrontWheel(0.94);
-  makeFrontWheel(-0.94);
-  makeRearWheel(1.0);
-  makeRearWheel(-1.0);
+  stickGroup.add(bucketGroup);
+  boomGroup.add(stickGroup);
+  jcb.add(boomGroup);
 
   return { jcb, wheels, beacon };
 }
