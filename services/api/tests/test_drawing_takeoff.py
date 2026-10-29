@@ -152,3 +152,21 @@ async def test_drawing_takeoff_lifecycle_and_boq_transfer(client: AsyncClient, t
     )
     assert del_d.status_code == 204
 
+    # 9. Test Direct AI Drawing-to-BOQ Analyzer endpoint
+    road_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 300
+    files_road = {"file": ("Rural Road Engineering Plan Sheet (1).png", io.BytesIO(road_png), "image/png")}
+    road_analyze_res = await client.post(
+        f"/api/organizations/{org_id}/estimates/{estimate_id}/drawings/analyze",
+        headers=headers_a,
+        files=files_road,
+    )
+    assert road_analyze_res.status_code == 200, road_analyze_res.text
+    road_data = road_analyze_res.json()
+    assert road_data["drawing_domain"] == "Rural Road Construction & Pavement Infrastructure"
+    assert len(road_data["detected_items"]) == 8
+    assert road_data["total_estimated_amount"] > 0
+    assert any("GSB" in it["description"] for it in road_data["detected_items"])
+    assert any("WMM" in it["description"] for it in road_data["detected_items"])
+    assert any("Bituminous" in it["description"] for it in road_data["detected_items"])
+
+
