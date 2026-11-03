@@ -206,8 +206,8 @@ function createContactShadowTexture(): THREE.CanvasTexture {
   canvas.height = 256;
   const ctx = canvas.getContext("2d")!;
   const grad = ctx.createRadialGradient(256, 128, 20, 256, 128, 120);
-  grad.addColorStop(0, "rgba(20, 24, 30, 0.65)");
-  grad.addColorStop(0.5, "rgba(20, 24, 30, 0.32)");
+  grad.addColorStop(0, "rgba(20, 24, 30, 0.70)");
+  grad.addColorStop(0.5, "rgba(20, 24, 30, 0.35)");
   grad.addColorStop(1, "rgba(20, 24, 30, 0)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 512, 256);
@@ -415,135 +415,70 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     logoMesh.castShadow = true;
     logoGroup.add(logoMesh);
 
-    // 9. Real 3D Assembled JCB 3CX from User CAD Archive
+    // 9. Real 3D Assembled JCB 245XR Heavy Crawler Excavator from User CAD STLs
     const jcbGroup = new THREE.Group();
     scene.add(jcbGroup);
 
-    // PBR Materials for the 3D Vehicle
-    const jcbYellow = new THREE.MeshStandardMaterial({
-      color: 0xF59E00, // Authentic JCB Golden Yellow
+    // Authentic PBR Materials matching JCB Industrial Standard
+    const matJcbYellow = new THREE.MeshStandardMaterial({
+      color: 0xF59E00, // Authentic JCB Golden Construction Yellow
       roughness: 0.35,
       metalness: 0.25,
       side: THREE.DoubleSide,
     });
-    const darkChassis = new THREE.MeshStandardMaterial({
-      color: 0x1A1F26,
+    const matDarkChassis = new THREE.MeshStandardMaterial({
+      color: 0x1A1F26, // Dark Cast Iron Steel (Tracks, Undercarriage, Bucket)
       roughness: 0.65,
       metalness: 0.55,
       side: THREE.DoubleSide,
     });
-    const tireRubber = new THREE.MeshStandardMaterial({
-      color: 0x141619,
-      roughness: 0.85,
-      metalness: 0.08,
-    });
-    const blackTrim = new THREE.MeshStandardMaterial({
-      color: 0x101318,
-      roughness: 0.8,
-      metalness: 0.2,
+    const matCabGlass = new THREE.MeshPhysicalMaterial({
+      color: 0x142030, // Smoked Safety Glass
+      transparent: true,
+      opacity: 0.70,
+      roughness: 0.1,
+      metalness: 0.8,
+      transmission: 0.65,
+      side: THREE.DoubleSide,
     });
 
-    // Soft Radial Ground Contact Shadow Patch below the wheels
+    // Soft Ground Contact Shadow Patch below the crawler tracks
     const shadowTex = createContactShadowTexture();
     const shadowMat = new THREE.MeshBasicMaterial({
       map: shadowTex,
       transparent: true,
       depthWrite: false,
     });
-    const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 2.8), shadowMat);
+    const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(8.2, 3.2), shadowMat);
     shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.set(0.1, 0.015, 0);
+    shadowPlane.position.set(0, 0.015, 0);
     jcbGroup.add(shadowPlane);
 
-    // Lower Chassis Box & Operator Steps
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.68, 1.55), darkChassis);
-    chassis.position.set(0, 0.88, 0);
-    chassis.castShadow = true;
-    chassis.receiveShadow = true;
-    jcbGroup.add(chassis);
+    // Multi-material mapping for the 6 geometry groups in jcb_245xr_assembled.obj
+    const cadMaterials = [
+      matDarkChassis, // Group 0: Undercarriage, track frames, center carbody, sprockets
+      matJcbYellow,   // Group 1: Main revolving body deck
+      matDarkChassis, // Group 2: Counterweight lower section
+      matCabGlass,    // Group 3: CommandPlus operator cabin glass
+      matJcbYellow,   // Group 4: Cab roof, twin-spar boom, dipper stick
+      matDarkChassis, // Group 5: Excavator bucket, H-linkage, hydraulic cylinders
+    ];
 
-    // Front Bumper Counterweight
-    const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 1.58), darkChassis);
-    bumper.position.set(1.82, 0.86, 0);
-    bumper.castShadow = true;
-    jcbGroup.add(bumper);
-
-    // 3D Rotating Wheels (Front Industrial Steer + Rear Giant Earthmover)
-    const wheels: { group: THREE.Group; radius: number }[] = [];
-
-    // Front Steer Wheels
-    [-0.94, 0.94].forEach((zSide) => {
-      const wg = new THREE.Group();
-      wg.position.set(1.2, 0.45, zSide);
-
-      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.36, 24), tireRubber);
-      tire.rotation.x = Math.PI / 2;
-      tire.castShadow = true;
-
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 18), jcbYellow);
-      rim.rotation.x = Math.PI / 2;
-
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.39, 12), darkChassis);
-      hub.rotation.x = Math.PI / 2;
-
-      wg.add(tire, rim, hub);
-      jcbGroup.add(wg);
-      wheels.push({ group: wg, radius: 0.45 });
-    });
-
-    // Rear Earthmover Wheels (with 18 pairs of directional chevron traction lugs)
-    [-1.02, 1.02].forEach((zSide) => {
-      const wg = new THREE.Group();
-      wg.position.set(-0.95, 0.76, zSide);
-
-      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.74, 0.56, 32), tireRubber);
-      tire.rotation.x = Math.PI / 2;
-      tire.castShadow = true;
-
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.57, 24), jcbYellow);
-      rim.rotation.x = Math.PI / 2;
-
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.61, 14), darkChassis);
-      hub.rotation.x = Math.PI / 2;
-
-      const lugGeom = new THREE.BoxGeometry(0.18, 0.065, 0.24);
-      for (let i = 0; i < 18; i++) {
-        const angle = (i / 18) * Math.PI * 2;
-        const lx = Math.cos(angle) * 0.77;
-        const ly = Math.sin(angle) * 0.77;
-
-        const lugL = new THREE.Mesh(lugGeom, tireRubber);
-        lugL.position.set(lx, ly, -0.12);
-        lugL.rotation.z = angle;
-        lugL.rotation.y = 0.42;
-
-        const lugR = new THREE.Mesh(lugGeom, tireRubber);
-        lugR.position.set(lx, ly, 0.12);
-        lugR.rotation.z = angle;
-        lugR.rotation.y = -0.42;
-
-        wg.add(lugL, lugR);
-      }
-
-      wg.add(tire, rim, hub);
-      jcbGroup.add(wg);
-      wheels.push({ group: wg, radius: 0.76 });
-    });
-
-    // Load Assembled CAD 3D Model from User Zip File!
     const cadMeshGroup = new THREE.Group();
+    // Center the excavator so X=0 is the center pivot (model X center was at +2.40m)
+    cadMeshGroup.position.set(-2.40, 0, 0);
     jcbGroup.add(cadMeshGroup);
 
     const objLoader = new OBJLoader();
     objLoader.load(
-      "/assets/jcb_3cx_assembled.obj",
+      "/assets/jcb_245xr_assembled.obj",
       (cadObj) => {
         cadObj.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
             mesh.castShadow = true;
             mesh.receiveShadow = true;
-            mesh.material = jcbYellow;
+            mesh.material = cadMaterials;
           }
         });
         cadMeshGroup.add(cadObj);
@@ -551,13 +486,13 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       },
       undefined,
       (err) => {
-        console.warn("CAD OBJ load fallback active:", err);
+        console.warn("JCB 245XR CAD load error:", err);
       }
     );
 
     jcbGroup.position.z = 0.85;
 
-    // 10. Subtle Ground Dust Particles
+    // 10. Subtle Ground Dust Particles drifting from under the crawler tracks
     const particleCount = 120;
     const particleGeom = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
@@ -585,8 +520,8 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
     let isRunning = true;
     let animId: number;
 
-    const startX = -14.5;
-    const stopX = 10.2;
+    const startX = -15.5;
+    const stopX = 10.5;
     const travelDistance = stopX - startX;
     const travelDuration = 5600;
     let prevJcbX = startX;
@@ -617,24 +552,19 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
       // Position vehicle
       jcbGroup.position.x = currentJcbX;
 
-      // Realistic suspension heave & engine idling vibration
+      // Realistic crawler track heave & heavy diesel engine vibration
       if (tNorm < 1.0) {
-        jcbGroup.position.y = Math.sin(elapsed * 0.016) * 0.024;
-        jcbGroup.rotation.z = Math.sin(elapsed * 0.013) * 0.012;
+        jcbGroup.position.y = Math.sin(elapsed * 0.018) * 0.022;
+        jcbGroup.rotation.z = Math.sin(elapsed * 0.014) * 0.010;
       } else {
-        jcbGroup.position.y = Math.sin(elapsed * 0.02) * 0.006;
+        jcbGroup.position.y = Math.sin(elapsed * 0.02) * 0.005;
         jcbGroup.rotation.z = 0;
       }
 
-      // Rotate wheels proportional to linear distance: dAngle = -dx / radius
-      wheels.forEach(({ group, radius }) => {
-        group.rotation.z -= deltaX / radius;
-      });
-
       // Live Position-Synchronized Reveal:
-      // The rear edge of the JCB backhoe is at currentJcbX - 3.25.
+      // The rear edge of the crawler tracks/counterweight is at currentJcbX - 3.85.
       // Progressively reveals "WELCOME TO" and then the complete Anumaan brand logo!
-      const printThreshold = currentJcbX - 3.25;
+      const printThreshold = currentJcbX - 3.85;
       clippingPlane.constant = printThreshold;
 
       // Dust particles (active only while moving)
@@ -642,7 +572,7 @@ export function CinematicJCBIntro({ onComplete, canSkip = true }: CinematicJCBIn
         const positions = particleGeom.attributes.position.array as Float32Array;
         for (let i = 0; i < particleCount; i++) {
           if (particleVelocities[i].life <= 0 && Math.random() < 0.28) {
-            positions[i * 3] = currentJcbX - 1.2 + (Math.random() - 0.5) * 0.8;
+            positions[i * 3] = currentJcbX - 1.8 + (Math.random() - 0.5) * 1.2;
             positions[i * 3 + 1] = 0.05 + Math.random() * 0.12;
             positions[i * 3 + 2] = 0.85 + (Math.random() - 0.5) * 1.8;
 
